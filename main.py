@@ -20,6 +20,8 @@ for caracter in argumento:
                 numero_final += int(numero_atual)
             elif operador_atual == "-":
                 numero_final -= int(numero_atual)
+            else:
+                numero_final = int(numero_atual)
             numero_atual = ""
             operador_atual = caracter
         else:
