@@ -24,12 +24,16 @@ for caracter in argumento:
             operador_atual = caracter
         else:
             raise ValueError("Operador sem número")
-
-if operador_atual is None:
-    raise ValueError("Operador não encontrado")
+        
 
 if numero_atual:
     if operador_atual == "+":
         numero_final += int(numero_atual)
     elif operador_atual == "-":
         numero_final -= int(numero_atual)
+else:    
+    raise ValueError("Operador sem número") 
+    
+if operador_atual is None:
+    raise ValueError("Operador não encontrado")
+print(numero_final)
