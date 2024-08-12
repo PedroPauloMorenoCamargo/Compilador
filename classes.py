@@ -9,7 +9,6 @@ class Tokenizer:
         self.position = 0
         self.tokens = []
         self.tokenize()
-        self.operator = False
 
     def tokenize(self):
         while self.position < len(self.source):
@@ -17,7 +16,6 @@ class Tokenizer:
             if current_char.isdigit():
                 self.tokens.append(self.create_number_token())
             elif current_char in '+-*/':
-                self.operator = True
                 self.tokens.append(Token('operator', current_char))
                 self.position += 1
             else:
@@ -39,6 +37,7 @@ class Parser:
     def __init__(self, tokenizer):
         self.tokenizer = tokenizer
         self.current_token = None
+        self.operator = False
 
     def parse_expression(self):
         self.current_token = self.tokenizer.next_token()
@@ -47,6 +46,7 @@ class Parser:
         
         result = self.parse_term()
         while self.current_token and self.current_token.type == 'operator' and self.current_token.value in '+-':
+            self.operator = True
             operator = self.current_token.value
             self.current_token = self.tokenizer.next_token()
             if self.current_token.type == 'EOF':
@@ -57,7 +57,8 @@ class Parser:
                 result += operand
             elif operator == '-':
                 result -= operand
-        if self.tokenizer.operator == False:
+
+        if self.operator == False:
             raise ValueError("Expected an Operator but got None") 
         return result
 
