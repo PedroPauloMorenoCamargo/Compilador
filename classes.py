@@ -9,6 +9,7 @@ class Tokenizer:
         self.position = 0
         self.tokens = []
         self.tokenize()
+        self.operator = False
 
     def tokenize(self):
         while self.position < len(self.source):
@@ -16,6 +17,7 @@ class Tokenizer:
             if current_char.isdigit():
                 self.tokens.append(self.create_number_token())
             elif current_char in '+-*/':
+                self.operator = True
                 self.tokens.append(Token('operator', current_char))
                 self.position += 1
             else:
@@ -55,7 +57,8 @@ class Parser:
                 result += operand
             elif operator == '-':
                 result -= operand
-            
+        if self.tokenizer.operator == False:
+            raise ValueError("Expected an Operator but got None") 
         return result
 
     def parse_term(self):
