@@ -65,6 +65,7 @@ class Parser:
         result = self.parse_factor()
 
         while self.current_token.type in ('MULTIPLY', 'DIVIDE'):
+            self.operacao = True
             operator = self.current_token.type
             self.tokenizer.selectNext()
             self.current_token = self.tokenizer.next
