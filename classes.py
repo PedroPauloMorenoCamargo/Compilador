@@ -1,3 +1,5 @@
+import sys
+
 class Token:
     def __init__(self, token_type, value):
         self.type = token_type
@@ -94,5 +96,6 @@ class Parser:
         try:
             result = self.parse_expression()
         except ValueError as e:
-            return str(e)
-        return result
+            print(str(e), file=sys.stderr)
+            return None
+        print(result)

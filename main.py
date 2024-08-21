@@ -8,4 +8,4 @@ argumento = ''.join(sys.argv[1:])
 argumento = argumento.replace(" ", "")
 
 parser = Parser()
-print(parser.run(argumento))
+parser.run(argumento)
