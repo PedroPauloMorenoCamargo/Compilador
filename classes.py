@@ -7,78 +7,87 @@ class Tokenizer:
     def __init__(self, source):
         self.source = source
         self.position = 0
-        self.tokens = []
-        self.tokenize()
+        self.next = None
+        self.selectNext()
 
-    def tokenize(self):
-        while self.position < len(self.source):
-            current_char = self.source[self.position]
-            if current_char.isdigit():
-                self.tokens.append(self.create_number_token())
-            elif current_char in '+-*/':
-                self.tokens.append(Token('operator', current_char))
-                self.position += 1
-            else:
-                raise ValueError(f"Invalid character found: {current_char}")
+    def selectNext(self):
+        if self.position >= len(self.source):
+            self.next = Token("EOF", None)
+            return
         
-        self.tokens.append(Token('EOF', None))
+        caracter = self.source[self.position]
 
-    def create_number_token(self):
-        start_position = self.position
-        while self.position < len(self.source) and (self.source[self.position].isdigit()):
-            self.position += 1
-        value = int(self.source[start_position:self.position])
-        return Token('number', value)
+        if caracter == '+':
+            self.next = Token("PLUS", caracter)
+        elif caracter == '-':
+            self.next = Token("MINUS", caracter)
+        elif caracter == '*':
+            self.next = Token("MULTIPLY", caracter)
+        elif caracter == '/':
+            self.next = Token("DIVIDE", caracter)
+        elif caracter.isdigit():
+            numero = self.source[self.position]
+            while (self.position + 1) < len(self.source) and self.source[self.position + 1].isdigit():
+                self.position += 1
+                numero += self.source[self.position]
+            self.next = Token("NUMBER", int(numero))
+        else:
+            raise ValueError("Caracter inválido")
 
-    def next_token(self):
-        return self.tokens.pop(0) if self.tokens else None
+        self.position += 1
 
 class Parser:
-    def __init__(self, tokenizer):
-        self.tokenizer = tokenizer
+    def __init__(self):
+        self.tokenizer = None
         self.current_token = None
-        self.operator = False
 
     def parse_expression(self):
-        self.current_token = self.tokenizer.next_token()
-        if self.current_token.type == 'EOF':
-            raise ValueError("Empty expression")
-        
         result = self.parse_term()
-        while self.current_token and self.current_token.type == 'operator' and self.current_token.value in '+-':
-            self.operator = True
-            operator = self.current_token.value
-            self.current_token = self.tokenizer.next_token()
-            if self.current_token.type == 'EOF':
-                raise ValueError("Expected a term after the operator but got EOF")
-            
+
+        while self.current_token.type in ('PLUS', 'MINUS'):
+            operator = self.current_token.type
+            self.tokenizer.selectNext()
+            self.current_token = self.tokenizer.next
             operand = self.parse_term()
-            if operator == '+':
+            
+            if operator == 'PLUS':
                 result += operand
-            elif operator == '-':
+            elif operator == 'MINUS':
                 result -= operand
 
-        if self.operator == False:
-            raise ValueError("Expected an Operator but got None") 
         return result
-
+    
     def parse_term(self):
-        if self.current_token.type == 'EOF':
-            raise ValueError("Expected a number but got EOF")
+        result = self.parse_factor()
+
+        while self.current_token.type in ('MULTIPLY', 'DIVIDE'):
+            operator = self.current_token.type
+            self.tokenizer.selectNext()
+            self.current_token = self.tokenizer.next
+            operand = self.parse_factor()
+            
+            if operator == 'MULTIPLY':
+                result *= operand
+            elif operator == 'DIVIDE':
+                result /= operand
+
+        return result
+    
+    def parse_factor(self):
+        self.current_token = self.tokenizer.next
         
-        if self.current_token.type == 'number':
+        if self.current_token.type == 'NUMBER':
             value = self.current_token.value
-            self.current_token = self.tokenizer.next_token()
+            self.tokenizer.selectNext()
+            self.current_token = self.tokenizer.next
             return value
         else:
             raise ValueError(f"Expected a number but got {self.current_token.type}")
-
-    @staticmethod
-    def run(code):
-        tokenizer = Tokenizer(code)
-        parser = Parser(tokenizer)
+        
+    def run(self, code):
+        self.tokenizer = Tokenizer(code)
         try:
-            result = parser.parse_expression()
-            print(f"Result: {result}")
+            result = self.parse_expression()
         except ValueError as e:
-            print(f"Error: {e}")
+            return str(e)
+        return result

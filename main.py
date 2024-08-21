@@ -1,4 +1,4 @@
-import classes
+from classes import Parser
 import sys
 
 if len(sys.argv) < 2:
@@ -7,6 +7,5 @@ if len(sys.argv) < 2:
 argumento = ''.join(sys.argv[1:])
 argumento = argumento.replace(" ", "")
 
-tokenizer = classes.Tokenizer(argumento)
-parser = classes.Parser(tokenizer)
-print(parser.parse_expression())
+parser = Parser()
+print(parser.run(argumento))
