@@ -40,11 +40,13 @@ class Parser:
     def __init__(self):
         self.tokenizer = None
         self.current_token = None
+        self.operacao = False
 
     def parse_expression(self):
         result = self.parse_term()
 
         while self.current_token.type in ('PLUS', 'MINUS'):
+            self.operacao = True
             operator = self.current_token.type
             self.tokenizer.selectNext()
             self.current_token = self.tokenizer.next
@@ -54,7 +56,9 @@ class Parser:
                 result += operand
             elif operator == 'MINUS':
                 result -= operand
-
+        
+        if not self.operacao:
+            raise ValueError("Não há operadores na expressão")
         return result
     
     def parse_term(self):
@@ -71,7 +75,7 @@ class Parser:
             elif operator == 'DIVIDE':
                 result /= operand
 
-        return result
+        return int(result)
     
     def parse_factor(self):
         self.current_token = self.tokenizer.next
