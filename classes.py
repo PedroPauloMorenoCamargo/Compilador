@@ -49,10 +49,12 @@ class Parser:
     def __init__(self):
         self.tokenizer = None
         self.current_token = None
+        self.has_op = False
 
     def parse_expression(self):
         result = self.parse_term()
         while self.current_token.type in ('PLUS', 'MINUS'):
+            self.has_op = True
             operator = self.current_token.type
             self.tokenizer.selectNext()
             self.current_token = self.tokenizer.next
@@ -66,6 +68,8 @@ class Parser:
     def parse_term(self):
         result = self.parse_factor()
         while self.current_token.type in ('MULTIPLY', 'DIVIDE'):
+            print('oi')
+            self.has_op = True
             operator = self.current_token.type
             self.tokenizer.selectNext()
             self.current_token = self.tokenizer.next
@@ -85,12 +89,15 @@ class Parser:
             self.current_token = self.tokenizer.next
             return value
         elif self.current_token.type == "PLUS":
+            self.has_op = True
             self.tokenizer.selectNext()
             return self.parse_factor()
         elif self.current_token.type == "MINUS":
+            self.has_op = True
             self.tokenizer.selectNext()
             return -self.parse_factor()  # Recursively parse the factor and negate it
         elif self.current_token.type == 'LPAREN':
+            self.has_op = True
             self.tokenizer.selectNext()
             self.current_token = self.tokenizer.next
             result = self.parse_expression()
@@ -110,6 +117,8 @@ class Parser:
         self.tokenizer = Tokenizer(code)
         try:
             result = self.parse_expression()
+            if self.has_op == False:
+                raise ValueError("Não há operadores")
         except ValueError as e:
             print(str(e), file=sys.stderr)
             return None
