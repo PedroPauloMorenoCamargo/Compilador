@@ -13,6 +13,9 @@ class Tokenizer:
         self.selectNext()
 
     def selectNext(self):
+        while self.position < len(self.source) and self.source[self.position] == ' ':
+            self.position += 1
+        
         if self.position >= len(self.source):
             self.next = Token("EOF", None)
             return
@@ -27,6 +30,10 @@ class Tokenizer:
             self.next = Token("MULTIPLY", caracter)
         elif caracter == '/':
             self.next = Token("DIVIDE", caracter)
+        elif caracter == '(':
+            self.next = Token("LPAREN", caracter)
+        elif caracter == ')':
+            self.next = Token("RPAREN", caracter)
         elif caracter.isdigit():
             numero = self.source[self.position]
             while (self.position + 1) < len(self.source) and self.source[self.position + 1].isdigit():
@@ -34,7 +41,7 @@ class Tokenizer:
                 numero += self.source[self.position]
             self.next = Token("NUMBER", int(numero))
         else:
-            raise ValueError("Caracter inválido")
+            raise ValueError(f"Caracter inválido: {caracter}")
 
         self.position += 1
 
@@ -42,32 +49,23 @@ class Parser:
     def __init__(self):
         self.tokenizer = None
         self.current_token = None
-        self.operacao = False
 
     def parse_expression(self):
         result = self.parse_term()
-
         while self.current_token.type in ('PLUS', 'MINUS'):
-            self.operacao = True
             operator = self.current_token.type
             self.tokenizer.selectNext()
             self.current_token = self.tokenizer.next
             operand = self.parse_term()
-            
             if operator == 'PLUS':
                 result += operand
             elif operator == 'MINUS':
                 result -= operand
-        
-        if not self.operacao:
-            raise ValueError("Não há operadores na expressão")
         return result
     
     def parse_term(self):
         result = self.parse_factor()
-
         while self.current_token.type in ('MULTIPLY', 'DIVIDE'):
-            self.operacao = True
             operator = self.current_token.type
             self.tokenizer.selectNext()
             self.current_token = self.tokenizer.next
@@ -76,20 +74,37 @@ class Parser:
             if operator == 'MULTIPLY':
                 result *= operand
             elif operator == 'DIVIDE':
-                result /= operand
-
-        return int(result)
+                result //= operand
+        return result
     
     def parse_factor(self):
         self.current_token = self.tokenizer.next
-        
-        if self.current_token.type == 'NUMBER':
-            value = self.current_token.value
+        if self.current_token.type == "NUMBER":
+            value = self.current_token.value 
             self.tokenizer.selectNext()
             self.current_token = self.tokenizer.next
             return value
+        elif self.current_token.type == "PLUS":
+            self.tokenizer.selectNext()
+            return self.parse_factor()
+        elif self.current_token.type == "MINUS":
+            self.tokenizer.selectNext()
+            return -self.parse_factor()  # Recursively parse the factor and negate it
+        elif self.current_token.type == 'LPAREN':
+            self.tokenizer.selectNext()
+            self.current_token = self.tokenizer.next
+            result = self.parse_expression()
+            if self.current_token.type != 'RPAREN':
+                raise ValueError("Missing closing parenthesis")
+            self.tokenizer.selectNext()
+            self.current_token = self.tokenizer.next
+            return result
         else:
-            raise ValueError(f"Expected a number but got {self.current_token.type}")
+            raise ValueError(f"Expected a number or parenthesis but got {self.current_token.type}")
+        
+            
+
+        
         
     def run(self, code):
         self.tokenizer = Tokenizer(code)
