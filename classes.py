@@ -68,7 +68,6 @@ class Parser:
     def parse_term(self):
         result = self.parse_factor()
         while self.current_token.type in ('MULTIPLY', 'DIVIDE'):
-            print('oi')
             self.has_op = True
             operator = self.current_token.type
             self.tokenizer.selectNext()
