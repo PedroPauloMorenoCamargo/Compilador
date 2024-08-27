@@ -117,6 +117,8 @@ class Parser:
         self.tokenizer = Tokenizer(code)
         try:
             result = self.parse_expression()
+            if self.current_token.type != 'EOF':
+                raise ValueError(f"Erro de sintaxe: token inesperado '{self.current_token.value}' no final da expressão.")
             if self.has_op == False:
                 raise ValueError("Não há operadores")
         except ValueError as e:
