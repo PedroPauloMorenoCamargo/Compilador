@@ -1,4 +1,60 @@
 import sys
+from abc import ABC, abstractmethod
+
+class PrePro:
+    @staticmethod
+    def filter(source):
+        # Remove comments that start with '--' and strip spaces/newlines
+        filtered_lines = [line.split('--')[0] for line in source.splitlines()]
+        # Join the lines together, removing spaces and newlines
+        return ''.join(filtered_lines).replace(' ', '').replace('\n', '')
+
+class Node(ABC):
+    def __init__(self, value=None):
+        self.value = value
+        self.children = []
+
+    @abstractmethod
+    def Evaluate(self):
+        pass
+
+class BinOp(Node):
+    def __init__(self, value, left, right):
+        super().__init__(value)
+        self.children = [left, right]
+
+    def Evaluate(self):
+        if self.value == 'PLUS':
+            return self.children[0].Evaluate() + self.children[1].Evaluate()
+        elif self.value == 'MINUS':
+            return self.children[0].Evaluate() - self.children[1].Evaluate()
+        elif self.value == 'MULTIPLY':
+            return self.children[0].Evaluate() * self.children[1].Evaluate()
+        elif self.value == 'DIVIDE':
+            return self.children[0].Evaluate() // self.children[1].Evaluate()
+
+class UnOp(Node):
+    def __init__(self, value, child):
+        super().__init__(value)
+        self.children = [child]
+
+    def Evaluate(self):
+        if self.value == 'PLUS':
+            return self.children[0].Evaluate()
+        elif self.value == 'MINUS':
+            return -self.children[0].Evaluate()
+
+class IntVal(Node):
+    def __init__(self, value):
+        super().__init__(value)
+
+    def Evaluate(self):
+        return self.value
+
+class NoOp(Node):
+    def Evaluate(self):
+        return 0
+    
 
 class Token:
     def __init__(self, token_type, value):
@@ -45,61 +101,49 @@ class Tokenizer:
 
         self.position += 1
 
+
 class Parser:
     def __init__(self):
         self.tokenizer = None
         self.current_token = None
-        self.has_op = False
 
-    def parse_expression(self):
-        result = self.parse_term()
+    def parseExpression(self):
+        result = self.parseTerm()
         while self.current_token.type in ('PLUS', 'MINUS'):
-            self.has_op = True
             operator = self.current_token.type
             self.tokenizer.selectNext()
             self.current_token = self.tokenizer.next
-            operand = self.parse_term()
-            if operator == 'PLUS':
-                result += operand
-            elif operator == 'MINUS':
-                result -= operand
+            operand = self.parseTerm()
+            result = BinOp(operator, result, operand)
         return result
     
-    def parse_term(self):
-        result = self.parse_factor()
+    def parseTerm(self):
+        result = self.parseFactor()
         while self.current_token.type in ('MULTIPLY', 'DIVIDE'):
-            self.has_op = True
             operator = self.current_token.type
             self.tokenizer.selectNext()
             self.current_token = self.tokenizer.next
-            operand = self.parse_factor()
-            
-            if operator == 'MULTIPLY':
-                result *= operand
-            elif operator == 'DIVIDE':
-                result //= operand
+            operand = self.parseFactor()
+            result = BinOp(operator, result, operand)
         return result
     
-    def parse_factor(self):
+    def parseFactor(self):
         self.current_token = self.tokenizer.next
         if self.current_token.type == "NUMBER":
-            value = self.current_token.value 
+            value = self.current_token.value
             self.tokenizer.selectNext()
             self.current_token = self.tokenizer.next
-            return value
+            return IntVal(value)
         elif self.current_token.type == "PLUS":
-            self.has_op = True
             self.tokenizer.selectNext()
-            return self.parse_factor()
+            return UnOp("PLUS", self.parseFactor())
         elif self.current_token.type == "MINUS":
-            self.has_op = True
             self.tokenizer.selectNext()
-            return -self.parse_factor()  # Recursively parse the factor and negate it
+            return UnOp("MINUS", self.parseFactor())
         elif self.current_token.type == 'LPAREN':
-            self.has_op = True
             self.tokenizer.selectNext()
             self.current_token = self.tokenizer.next
-            result = self.parse_expression()
+            result = self.parseExpression()
             if self.current_token.type != 'RPAREN':
                 raise ValueError("Missing closing parenthesis")
             self.tokenizer.selectNext()
@@ -108,19 +152,10 @@ class Parser:
         else:
             raise ValueError(f"Expected a number or parenthesis but got {self.current_token.type}")
         
-            
-
-        
-        
     def run(self, code):
         self.tokenizer = Tokenizer(code)
-        try:
-            result = self.parse_expression()
-            if self.current_token.type != 'EOF':
-                raise ValueError(f"Erro de sintaxe: token inesperado '{self.current_token.value}' no final da expressão.")
-            if self.has_op == False:
-                raise ValueError("Não há operadores")
-        except ValueError as e:
-            print(str(e), file=sys.stderr)
-            return None
-        print(result)
+        ast = self.parseExpression()
+        if self.current_token.type != 'EOF':
+            raise ValueError(f"Erro de sintaxe: token inesperado '{self.current_token.value}' no final da expressão.")
+        return ast
+
