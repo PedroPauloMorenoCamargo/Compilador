@@ -1,13 +1,17 @@
 import sys
 from abc import ABC, abstractmethod
 
+import re
+
 class PrePro:
     @staticmethod
     def filter(source):
-        # Remove comments that start with '--' and strip spaces/newlines
-        filtered_lines = [line.split('--')[0] for line in source.splitlines()]
-        # Join the lines together, removing spaces and newlines
-        return ''.join(filtered_lines).replace(' ', '').replace('\n', '')
+        # Remove C-style single-line (//) and multi-line (/* */) comments
+        source = re.sub(r'//.*', '', source)  # Remove single-line comments
+        source = re.sub(r'/\*.*?\*/', '', source, flags=re.DOTALL)  # Remove multi-line comments
+        
+        # Remove spaces and newlines
+        return ''.join(source).replace(' ', '').replace('\n', '')
 
 class Node(ABC):
     def __init__(self, value=None):
