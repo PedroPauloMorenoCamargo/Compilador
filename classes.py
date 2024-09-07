@@ -7,7 +7,6 @@ class PrePro:
     @staticmethod
     def filter(source):
         # Remove C-style single-line (//) and multi-line (/* */) comments
-        source = re.sub(r'//.*', '', source)  # Remove single-line comments
         source = re.sub(r'/\*.*?\*/', '', source, flags=re.DOTALL)  # Remove multi-line comments
         
         # Remove spaces and newlines
