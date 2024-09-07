@@ -143,9 +143,11 @@ class Parser:
             self.current_token = self.tokenizer.next
             return IntVal(value)
         elif self.current_token.type == "PLUS":
+            self.op = True
             self.tokenizer.selectNext()
             return UnOp("PLUS", self.parseFactor())
         elif self.current_token.type == "MINUS":
+            self.op = True
             self.tokenizer.selectNext()
             return UnOp("MINUS", self.parseFactor())
         elif self.current_token.type == 'LPAREN':
