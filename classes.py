@@ -11,7 +11,7 @@ class PrePro:
         source = re.sub(r'/\*.*?\*/', '', source, flags=re.DOTALL)  # Remove multi-line comments
         
         # Remove spaces and newlines
-        return ''.join(source).replace(' ', '').replace('\n', '')
+        return ''.join(source)
 
 
 class Node(ABC):
@@ -74,7 +74,7 @@ class Tokenizer:
         self.selectNext()
 
     def selectNext(self):
-        while self.position < len(self.source) and self.source[self.position] == ' ':
+        while self.position < len(self.source) and (self.source[self.position] == ' ' or self.source[self.position] == '\n'):
             self.position += 1
         
         if self.position >= len(self.source):
@@ -111,12 +111,10 @@ class Parser:
     def __init__(self):
         self.tokenizer = None
         self.current_token = None
-        self.op = False
 
     def parseExpression(self):
         result = self.parseTerm()
         while self.current_token.type in ('PLUS', 'MINUS'):
-            self.op = True
             operator = self.current_token.type
             self.tokenizer.selectNext()
             self.current_token = self.tokenizer.next
@@ -127,7 +125,6 @@ class Parser:
     def parseTerm(self):
         result = self.parseFactor()
         while self.current_token.type in ('MULTIPLY', 'DIVIDE'):
-            self.op = True
             operator = self.current_token.type
             self.tokenizer.selectNext()
             self.current_token = self.tokenizer.next
@@ -141,13 +138,13 @@ class Parser:
             value = self.current_token.value
             self.tokenizer.selectNext()
             self.current_token = self.tokenizer.next
+            if self.current_token.type == 'NUMBER':
+                raise ValueError(f"Erro de sintaxe: número depois de numero '{self.current_token.value}'")
             return IntVal(value)
         elif self.current_token.type == "PLUS":
-            self.op = True
             self.tokenizer.selectNext()
             return UnOp("PLUS", self.parseFactor())
         elif self.current_token.type == "MINUS":
-            self.op = True
             self.tokenizer.selectNext()
             return UnOp("MINUS", self.parseFactor())
         elif self.current_token.type == 'LPAREN':
@@ -165,8 +162,6 @@ class Parser:
     def run(self, code):
         self.tokenizer = Tokenizer(code)
         ast = self.parseExpression()
-        if not self.op:
-            raise ValueError("Erro de sintaxe: expressão sem Operador.")
         if self.current_token.type != 'EOF':
             raise ValueError(f"Erro de sintaxe: token inesperado '{self.current_token.value}' no final da expressão.")
         return ast
