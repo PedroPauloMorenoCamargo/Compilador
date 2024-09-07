@@ -1,7 +1,7 @@
 import sys
 from abc import ABC, abstractmethod
 
-import re
+import re 
 
 class PrePro:
     @staticmethod
@@ -12,6 +12,7 @@ class PrePro:
         
         # Remove spaces and newlines
         return ''.join(source).replace(' ', '').replace('\n', '')
+
 
 class Node(ABC):
     def __init__(self, value=None):
@@ -110,10 +111,12 @@ class Parser:
     def __init__(self):
         self.tokenizer = None
         self.current_token = None
+        self.op = False
 
     def parseExpression(self):
         result = self.parseTerm()
         while self.current_token.type in ('PLUS', 'MINUS'):
+            self.op = True
             operator = self.current_token.type
             self.tokenizer.selectNext()
             self.current_token = self.tokenizer.next
@@ -124,6 +127,7 @@ class Parser:
     def parseTerm(self):
         result = self.parseFactor()
         while self.current_token.type in ('MULTIPLY', 'DIVIDE'):
+            self.op = True
             operator = self.current_token.type
             self.tokenizer.selectNext()
             self.current_token = self.tokenizer.next
@@ -159,6 +163,8 @@ class Parser:
     def run(self, code):
         self.tokenizer = Tokenizer(code)
         ast = self.parseExpression()
+        if not self.op:
+            raise ValueError("Erro de sintaxe: expressão sem Operador.")
         if self.current_token.type != 'EOF':
             raise ValueError(f"Erro de sintaxe: token inesperado '{self.current_token.value}' no final da expressão.")
         return ast
