@@ -15,6 +15,6 @@ with open(filename, 'r') as file:
 filtered_code = PrePro.filter(code)
 parser = Parser()
 ast = parser.run(filtered_code)
+symbol_table = SymbolTable()
 if ast:
-    result = ast.Evaluate()
-    print(result)
+    ast.Evaluate(symbol_table)
