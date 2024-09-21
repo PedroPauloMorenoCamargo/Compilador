@@ -100,7 +100,7 @@ class Scanf(Node):
 
     def Evaluate(self, symbol_table):
         #Lê um valor do usuário
-        value = int(input("Enter a value: "))
+        value = int(input())
         return value  
 
 
