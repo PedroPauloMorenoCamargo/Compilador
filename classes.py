@@ -20,9 +20,9 @@ class SymbolTable:
         else:
             raise ValueError(f"Undefined variable '{name}'")
 
-    def set(self, name, value):
+    def set(self, name, value_type):
         # Define o valor da variável
-        self.symbols[name] = value
+        self.symbols[name] = value_type
 
 class Token:
     def __init__(self, token_type, value):
@@ -70,6 +70,8 @@ class Tokenizer:
             self.next = Token("GREATER", caracter)
         elif caracter == '<':
             self.next = Token("LESS", caracter)
+        elif caracter == ',':
+            self.next = Token("COMMA", caracter)
         elif caracter == '=':
             if self.position + 1 < len(self.source) and self.source[self.position + 1] == '=':
                 self.position += 1
@@ -94,6 +96,14 @@ class Tokenizer:
                 self.next = Token("OR", "||")
             else:
                 raise ValueError("Invalid character: |")
+        elif caracter == '"':
+            #Determina a string
+            string = ""
+            self.position += 1
+            while self.position < len(self.source) and self.source[self.position] != '"':
+                string += self.source[self.position]
+                self.position += 1
+            self.next = Token("STRING", string)
         elif caracter.isdigit():
             #Determina o número
             numero = self.source[self.position]
@@ -113,7 +123,9 @@ class Tokenizer:
                 "else": "ELSE",
                 "while": "WHILE",
                 "scanf": "SCANF",
-                "printf": "PRINTF"
+                "printf": "PRINTF",
+                "int": "TYPE",
+                "str": "TYPE"
             }
             if identificador in keywords:
                 self.next = Token(keywords[identificador], identificador)
@@ -186,6 +198,47 @@ class Parser:
 
         return Assign(Identifier(id.value), expression)
     
+    def parseDeclaration(self):
+        var_type = self.tokenizer.next.value
+        self.tokenizer.selectNext()
+
+        declarations = []
+
+        while True:
+            identifier = self.tokenizer.next
+            self.tokenizer.selectNext()
+
+            if self.tokenizer.next.type == 'COMMA':
+                declarations.append((identifier.value, None))
+                self.tokenizer.selectNext()
+                continue
+
+            if self.tokenizer.next.type == 'ASSIGN':
+                self.tokenizer.selectNext()
+                expression = self.parseRelationalExpression()
+                declarations.append((identifier.value, expression))
+
+                if self.tokenizer.next.type == 'COMMA':
+                    self.tokenizer.selectNext()
+                    continue
+                elif self.tokenizer.next.type == 'SEMICOLON':
+                    break
+                else:
+                    raise ValueError(f"Erro de sintaxe: {self.tokenizer.next.value}")
+
+            elif self.tokenizer.next.type == 'SEMICOLON':
+                declarations.append((identifier.value, None))
+                break
+
+            else:
+                raise ValueError(f"Erro de sintaxe: {self.tokenizer.next.value}")
+        declaration_node = Declaration(var_type, declarations)
+        return declaration_node
+
+
+
+        
+
     def parseIf(self):
         self.tokenizer.selectNext()
         self.current_token = self.tokenizer.next
@@ -243,12 +296,14 @@ class Parser:
     def parseStatement(self):
         self.current_token = self.tokenizer.next
         #Parse para printf ou identificador
-        if self.current_token.type in ["PRINTF","IDENTIFIER"]:
+        if self.current_token.type in ["PRINTF","IDENTIFIER","TYPE"]:
             if self.current_token.type == "PRINTF":
                 result = self.parsePrintf()
                 self.tokenizer.selectNext()
-            else:
+            elif self.current_token.type == "IDENTIFIER":
                 result = self.parseIdentifier()
+            elif self.current_token.type == "TYPE":
+                result = self.parseDeclaration()
             self.current_token = self.tokenizer.next
             if self.current_token.type != 'SEMICOLON':
                 raise ValueError(f"Falta de ponto e vírgula após printf.")
@@ -304,13 +359,18 @@ class Parser:
         self.current_token = self.tokenizer.next
         token_type = self.current_token.type
         #Parse para número ou identificador
-        if token_type in ["NUMBER", "IDENTIFIER"]:
+        if token_type in ["NUMBER", "IDENTIFIER", "STRING"]:
             value = self.current_token.value
             self.tokenizer.selectNext()
             self.current_token = self.tokenizer.next
             if self.current_token.type == token_type:
                 raise ValueError(f"Erro de sintaxe: {token_type.lower()} depois de {token_type.lower()} '{self.current_token.value}'")
-            return IntVal(value) if token_type == "NUMBER" else Identifier(value)
+            if token_type == "NUMBER":
+                return IntVal(value)
+            elif token_type == "STRING":
+                return StrVal(value)
+            else:
+                return Identifier(value)
         #Parse para operador unário
         if token_type in ["PLUS", "MINUS", "NOT"]:
             self.tokenizer.selectNext()
