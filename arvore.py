@@ -51,6 +51,8 @@ class BinOp(Node):
             else:
                 raise TypeError(f"Unsupported operands for 'and': '{left_type}' and '{right_type}'")
         elif self.value == 'EQUALS':
+            if left_type == "str" and right_type != "str":
+                raise TypeError(f"Cannot compare 'str' with '{right_type}'")
             return int(left_value == right_value), 'bool'
         elif self.value == 'LESS':
             if left_type == right_type:
@@ -93,8 +95,8 @@ class UnOp(Node):
                 raise TypeError(f"Unary '-' not supported for type '{value_type}'")
 
         elif self.value == 'NOT':
-            if value_type == 'bool':
-                return not value, 'bool'
+            if value_type == 'bool' or value_type == 'int':
+                return int(not value), 'bool'
             else:
                 raise TypeError(f"Unary 'not' not supported for type '{value_type}'")
 

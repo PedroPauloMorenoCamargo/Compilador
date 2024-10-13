@@ -1,22 +1,14 @@
 
 {
-  /* All str operations */
-  str a, b;
-  int x_1, y, z;
-  x_1 = 1; y = 1; z = 2;
-  a = "abc";
-  b = "def";
-  printf(a+b);
-  printf(a+x_1);
-  printf(x_1+a);
-  printf(y+z);
-  printf(a+(x_1==1));
-  printf(a == a);
-  printf(a < b);
-  printf(a > b);
-  printf("1" + "1");
-  printf("1" + 1);
-  printf("1" + (1 < 1));
-  printf("1" == "1");
-
+    /*Logical operators*/
+    int a, b;
+    a = 1;
+    b = 2;
+    printf(1 && (a == a));
+    printf(b && (a > 1));
+    printf(0 || (a < 1));
+    printf(a || (b < a));
+    printf(!a);
+    printf(!b);
+    printf(!0);
 }
