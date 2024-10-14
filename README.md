@@ -32,7 +32,7 @@ IDENTIFIER = LETTER, { LETTER | DIGIT | "_" } ;
 
 NUMBER = DIGIT, { DIGIT } ;
 
-STRING = LETTER, {CHARACTER};
+STRING = CHARACTER, {CHARACTER};
 
 LETTER = ( a | ... | z | A | ... | Z ) ;
 
@@ -42,7 +42,7 @@ CHARACTER = LETTER | DIGIT | SPECIAL_CHARACTER ;
 
 SPECIAL_CHARACTER = ( " " | "!" | "@" | "#" | "$" | "%" | "^" | "&" | "*" | "(" | ")" | "-" | "_" | "+" | "=" | "{" | "}" | "[" | "]" | ":" | ";" | "'" | "<" | ">" | "," | "." | "?" | "/" | "\\" | "|" ) ;
 
-TYPE = ("INT" | "STR");
+TYPE = ("int" | "str");
 
 ![Alt text](diagram.png)
 
