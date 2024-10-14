@@ -10,67 +10,83 @@ class Node(ABC):
         pass
 
 class BinOp(Node):
-    def __init__(self, value, left, right):
-        super().__init__(value)
+    def __init__(self, op, left, right):
+        super().__init__(op)
         self.children = [left, right]
 
     def Evaluate(self, symbol_table):
         left_value, left_type = self.children[0].Evaluate(symbol_table)
         right_value, right_type = self.children[1].Evaluate(symbol_table)
 
-        if self.value == 'PLUS':
-            if left_type == 'str' or right_type == 'str':
-                
-                return str(left_value) + str(right_value), 'str'
-            return left_value + right_value, 'int'
-        elif self.value == 'MINUS':
-            if left_type == 'int' and right_type == 'int':
-                return left_value - right_value, 'int'
-            else:
-                raise TypeError(f"Unsupported operands for '-': '{left_type}' and '{right_type}'")
-        elif self.value == 'MULTIPLY':
-            if left_type == 'int' and right_type == 'int':
-                return left_value * right_value, 'int'
-            else:
-                raise TypeError(f"Unsupported operands for '*': '{left_type}' and '{right_type}'")
-        elif self.value == 'DIVIDE':
-            if left_type == 'int' and right_type == 'int':
-                if right_value == 0:
-                    raise ZeroDivisionError("Division by zero")
-                return left_value // right_value, 'int'
-            else:
-                raise TypeError(f"Unsupported operands for '/': '{left_type}' and '{right_type}'")
-        elif self.value == 'AND':
-            if left_type != 'str' and right_type != 'str':
-                return int(left_value and right_value), 'bool'
-            else:
-                raise TypeError(f"Unsupported operands for 'and': '{left_type}' and '{right_type}'")
-        elif self.value == 'OR':
-            if left_type != 'str' and right_type != 'str':
-                return int(left_value or right_value), 'bool'
-            else:
-                raise TypeError(f"Unsupported operands for 'and': '{left_type}' and '{right_type}'")
-        elif self.value == 'EQUALS':
-            if left_type == "str" and right_type != "str":
-                raise TypeError(f"Cannot compare 'str' with '{right_type}'")
-            return int(left_value == right_value), 'bool'
-        elif self.value == 'LESS':
-            if left_type == right_type:
-                return int(left_value < right_value), 'bool'
-            elif (left_type == 'bool' and right_type == 'int') or (left_type == 'int' and right_type == 'bool'):
-                return int(int(left_value) < int(right_value)), 'bool'
-            else:
-                raise TypeError(f"Cannot compare '{left_type}' and '{right_type}' with '<'")
-        elif self.value == 'GREATER':
-            if left_type == right_type:
-                return int(left_value > right_value), 'bool'
-            elif (left_type == 'bool' and right_type == 'int') or (left_type == 'int' and right_type == 'bool'):
-                return int(int(left_value) > int(right_value)), 'bool'
-            else:
-                raise TypeError(f"Cannot compare '{left_type}' and '{right_type}' with '<'")
-    
-    
-        raise ValueError(f"Unknown Binary Operator: {self.value}")
+        operations = {
+            'PLUS': self._handle_plus,
+            'MINUS': self._handle_minus,
+            'MULTIPLY': self._handle_multiply,
+            'DIVIDE': self._handle_divide,
+            'AND': self._handle_and,
+            'OR': self._handle_or,
+            'EQUALS': self._handle_equals,
+            'LESS': self._handle_less,
+            'GREATER': self._handle_greater
+        }
+
+        if self.value in operations:
+            return operations[self.value](left_value, left_type, right_value, right_type)
+        else:
+            raise ValueError(f"Unknown binary operator: {self.value}")
+
+    def _handle_plus(self, left_value, left_type, right_value, right_type):
+        if left_type == 'str' or right_type == 'str':
+            return str(left_value) + str(right_value), 'str'
+        return left_value + right_value, 'int'
+
+    def _handle_minus(self, left_value, left_type, right_value, right_type):
+        self._validate_type(left_type, right_type, 'int')
+        return left_value - right_value, 'int'
+
+    def _handle_multiply(self, left_value, left_type, right_value, right_type):
+        self._validate_type(left_type, right_type, 'int')
+        return left_value * right_value, 'int'
+
+    def _handle_divide(self, left_value, left_type, right_value, right_type):
+        self._validate_type(left_type, right_type, 'int')
+        if right_value == 0:
+            raise ZeroDivisionError("Division by zero")
+        return left_value // right_value, 'int'
+
+    def _handle_and(self, left_value, left_type, right_value, right_type):
+        self._validate_not_str(left_type, right_type)
+        return int(left_value and right_value), 'bool'
+
+    def _handle_or(self, left_value, left_type, right_value, right_type):
+        self._validate_not_str(left_type, right_type)
+        return int(left_value or right_value), 'bool'
+
+    def _handle_equals(self, left_value, left_type, right_value, right_type):
+        if (left_type == 'str' and right_type != 'str') or (left_type != 'str' and right_type == 'str'):
+            raise TypeError(f"Cannot compare 'str' with '{right_type}'")
+        return int(left_value == right_value), 'bool'
+
+    def _handle_less(self, left_value, left_type, right_value, right_type):
+        self._validate_comparison(left_type, right_type)
+        return int(left_value < right_value), 'bool'
+
+    def _handle_greater(self, left_value, left_type, right_value, right_type):
+        self._validate_comparison(left_type, right_type)
+        return int(left_value > right_value), 'bool'
+
+    def _validate_type(self, left_type, right_type, expected_type):
+        if left_type != expected_type or right_type != expected_type:
+            raise TypeError(f"Unsupported operands for operation: '{left_type}' and '{right_type}'")
+
+    def _validate_not_str(self, left_type, right_type):
+        if left_type == 'str' or right_type == 'str':
+            raise TypeError(f"Unsupported operands for boolean operation: '{left_type}' and '{right_type}'")
+
+    def _validate_comparison(self, left_type, right_type):
+        if left_type != right_type and not ((left_type == 'bool' and right_type == 'int') or (left_type == 'int' and right_type == 'bool')):
+            raise TypeError(f"Cannot compare '{left_type}' and '{right_type}'")
+
 
 
 
@@ -82,26 +98,34 @@ class UnOp(Node):
     def Evaluate(self, symbol_table):
         value, value_type = self.children[0].Evaluate(symbol_table)
 
-        if self.value == 'PLUS':
-            if value_type == 'int':
-                return +value, 'int'
-            else:
-                raise TypeError(f"Unary '+' not supported for type '{value_type}'")
+        operations = {
+            'PLUS': self._handle_plus,
+            'MINUS': self._handle_minus,
+            'NOT': self._handle_not
+        }
 
-        elif self.value == 'MINUS':
-            if value_type == 'int':
-                return -value, 'int'
-            else:
-                raise TypeError(f"Unary '-' not supported for type '{value_type}'")
-
-        elif self.value == 'NOT':
-            if value_type == 'bool' or value_type == 'int':
-                return int(not value), 'bool'
-            else:
-                raise TypeError(f"Unary 'not' not supported for type '{value_type}'")
-
+        if self.value in operations:
+            return operations[self.value](value, value_type)
         else:
-            raise ValueError(f"Unknown unary operator '{self.value}'")
+            raise ValueError(f"Unknown unary operator: {self.value}")
+
+    def _handle_plus(self, value, value_type):
+        self._validate_type(value_type, 'int')
+        return +value, 'int'
+
+    def _handle_minus(self, value, value_type):
+        self._validate_type(value_type, 'int')
+        return -value, 'int'
+
+    def _handle_not(self, value, value_type):
+        if value_type == 'bool' or value_type == 'int':
+            return int(not value), 'bool'
+        raise TypeError(f"Unary 'not' not supported for type '{value_type}'")
+
+    def _validate_type(self, value_type, expected_type):
+        if value_type != expected_type:
+            raise TypeError(f"Unary operator not supported for type '{value_type}'")
+
 
 
 
