@@ -17,7 +17,7 @@ class BinOp(Node):
     def Evaluate(self, symbol_table):
         left_value, left_type = self.children[0].Evaluate(symbol_table)
         right_value, right_type = self.children[1].Evaluate(symbol_table)
-
+        #Possíveis operações binárias
         operations = {
             'PLUS': self._handle_plus,
             'MINUS': self._handle_minus,
@@ -29,12 +29,13 @@ class BinOp(Node):
             'LESS': self._handle_less,
             'GREATER': self._handle_greater
         }
-
+        #Verifica se a operação é válida
         if self.value in operations:
             return operations[self.value](left_value, left_type, right_value, right_type)
         else:
             raise ValueError(f"Unknown binary operator: {self.value}")
-
+        
+    #Funções que realizam as operações binárias
     def _handle_plus(self, left_value, left_type, right_value, right_type):
         if left_type == 'str' or right_type == 'str':
             return str(left_value) + str(right_value), 'str'
@@ -97,18 +98,18 @@ class UnOp(Node):
 
     def Evaluate(self, symbol_table):
         value, value_type = self.children[0].Evaluate(symbol_table)
-
+        #Possíveis operações unárias
         operations = {
             'PLUS': self._handle_plus,
             'MINUS': self._handle_minus,
             'NOT': self._handle_not
         }
-
+        #Verifica se a operação é válida
         if self.value in operations:
             return operations[self.value](value, value_type)
         else:
             raise ValueError(f"Unknown unary operator: {self.value}")
-
+    #Funções que realizam as operações unárias
     def _handle_plus(self, value, value_type):
         self._validate_type(value_type, 'int')
         return +value, 'int'
@@ -141,7 +142,7 @@ class IntVal(Node):
 class StrVal(Node):
     def __init__(self, value):
         super().__init__(value.strip('"'))
-
+    
     def Evaluate(self, symbol_table):
         return self.value, 'str'
 
@@ -163,15 +164,15 @@ class Assign(Node):
 
     def Evaluate(self, symbol_table):
         var_name = self.children[0].value
-        # Check if the variable has been declared
+        # Checa se a variável foi declarada
         if var_name not in symbol_table.symbols:
             raise ValueError(f"Variable '{var_name}' not declared.")
 
-        # Evaluate the expression
+        # Avalia a expressão
         value, value_type = self.children[1].Evaluate(symbol_table)
         expected_type = symbol_table.get(var_name)[1]
 
-        # Type checking and implicit conversion if needed
+        # Checagem de tipo e conversão implícita
         if value_type != expected_type:
             if expected_type == 'int' and value_type == 'bool':
                 value = int(value)
@@ -179,9 +180,9 @@ class Assign(Node):
             else:
                 raise TypeError(f"Cannot assign '{value_type}' to '{expected_type}'.")
 
-        # Assign the value and type to the variable in the symbol table
+        # Atribui o valor à variável
         symbol_table.set(var_name, (value, expected_type))
-        return None, None  # Assignments do not return a value
+        return None, None 
 
 class Declaration(Node):
     def __init__(self, var_type, declarations):
@@ -190,31 +191,32 @@ class Declaration(Node):
         self.declarations = declarations
 
     def Evaluate(self, symbol_table):
-        # Default values for each type
+        # Valores padrão para inicialização
         default_values = {
             'int': 0,
             'str': ''
         }
 
         for var_name, expr in self.declarations:
+            # Checa se a variável já foi declarada
             if var_name in symbol_table.symbols:
                 raise ValueError(f"Variable '{var_name}' already declared.")
-
+            
             if expr != None:
-                # Evaluate the expression
+                # Avalia a expressão
                 value, value_type = expr.Evaluate(symbol_table)
 
-                # Type checking and implicit conversion
+                # Checagem de tipo e conversão implícita
                 if value_type != self.var_type:
                     if self.var_type == 'int' and value_type == 'bool':
                         value = int(value)
                         value_type = 'int'
                     else:
                         raise TypeError(f"Cannot assign '{value_type}' to '{self.var_type}'.")
-
+                # Atribui o valor à variável
                 symbol_table.set(var_name, (value, self.var_type))
             else:
-                # Assign default value
+                # Atribui o valor padrão à variável
                 symbol_table.set(var_name, (default_values[self.var_type], self.var_type))
         return None, None 
 
@@ -235,6 +237,7 @@ class Scanf(Node):
         super().__init__()
 
     def Evaluate(self, symbol_table):
+        # Lê um valor int do usuário
         value = int(input())
         return value, 'int'
 
@@ -246,9 +249,10 @@ class Statements(Node):
         self.children = []
 
     def Evaluate(self, symbol_table):
+        # Avalia cada nó filho
         for child in self.children:
             child.Evaluate(symbol_table)
-        return None, None  # Statements do not return a value
+        return None, None  
 
 
 class NoOp(Node):
@@ -264,15 +268,16 @@ class If(Node):
     def __init__(self, condition, true_block, false_block=None):
         super().__init__()
         self.children = [condition, true_block]
-        # If there's a false block, add it to the children
+        # Se houver um bloco 'else'
         if false_block:
             self.children.append(false_block)
 
     def Evaluate(self, symbol_table):
         condition_value, condition_type = self.children[0].Evaluate(symbol_table)
+        # Checa se a condição é do tipo 'bool'
         if condition_type != 'bool':
             raise TypeError(f"Condition in 'if' must be 'bool', got '{condition_type}'")
-
+        # Avalia o bloco correspondente
         if condition_value:
             self.children[1].Evaluate(symbol_table)
         elif len(self.children) == 3:
@@ -287,10 +292,12 @@ class While(Node):
     def Evaluate(self, symbol_table):
         while True:
             condition_value, condition_type = self.children[0].Evaluate(symbol_table)
+            # Checa se a condição é do tipo 'bool'
             if condition_type != 'bool':
                 raise TypeError(f"Condition in 'while' must be 'bool', got '{condition_type}'")
+            # Avalia a condição para continuar ou não
             if not condition_value:
                 break
             self.children[1].Evaluate(symbol_table)
-        return None, None  # While does not return a value
+        return None, None  
 

@@ -2,5 +2,5 @@
 {
     /*Logical operators*/
     str a;
-    a = "A
+    a = scanf();
 }

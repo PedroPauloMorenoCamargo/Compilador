@@ -201,39 +201,43 @@ class Parser:
         return Assign(Identifier(id.value), expression)
     
     def parseDeclaration(self):
+        #Determina o tipo da variável
         var_type = self.tokenizer.next.value
         self.tokenizer.selectNext()
-
+        #Lista das declarações
         declarations = []
 
         while True:
+            #Determina o identificador
             identifier = self.tokenizer.next
             self.tokenizer.selectNext()
-
+            #Verifica se o próximo token é uma vírgula e continua a declaração
             if self.tokenizer.next.type == 'COMMA':
                 declarations.append((identifier.value, None))
                 self.tokenizer.selectNext()
                 continue
-
+            #Verifica se o próximo token é um '='
             if self.tokenizer.next.type == 'ASSIGN':
                 self.tokenizer.selectNext()
                 expression = self.parseRelationalExpression()
                 declarations.append((identifier.value, expression))
-
+                #Verifica se o próximo token é uma vírgula e continua a declaração
                 if self.tokenizer.next.type == 'COMMA':
                     self.tokenizer.selectNext()
                     continue
+                #Verifica se o próximo token é um ponto e vírgula e finaliza a declaração
                 elif self.tokenizer.next.type == 'SEMICOLON':
                     break
                 else:
                     raise ValueError(f"Erro de sintaxe: {self.tokenizer.next.value}")
-
+            #Verifica se o próximo token é um ponto e vírgula e finaliza a declaração
             elif self.tokenizer.next.type == 'SEMICOLON':
                 declarations.append((identifier.value, None))
                 break
 
             else:
                 raise ValueError(f"Erro de sintaxe: {self.tokenizer.next.value}")
+        #Cria o nó de declaração
         declaration_node = Declaration(var_type, declarations)
         return declaration_node
 
@@ -328,39 +332,54 @@ class Parser:
         return result
 
     def parseRelationalExpression(self):
+        #Determina a expressão
         result = self.parseExpression()
+        #Verifica se o próximo token é um operador relacional
         if self.current_token.type in ('GREATER', 'LESS', 'EQUALS', 'NOT_EQUALS'):
+            #Determina o operador relacional
             operator = self.current_token.type
             self.tokenizer.selectNext()
             self.current_token = self.tokenizer.next
+            #Determina a proxima expressão
             operand = self.parseExpression()
+            #Cria o nó da expressão relacional
             result = BinOp(operator, result, operand)
         return result
     
     def parseExpression(self):
+        #Determina o termo
         result = self.parseTerm()
+        #Verifica se o próximo token é um operador de Expressão
         while self.current_token.type in ('PLUS', 'MINUS', 'OR'):
+            #Determina o operador de Expressão
             operator = self.current_token.type
             self.tokenizer.selectNext()
             self.current_token = self.tokenizer.next
+            #Determina o próximo termo
             operand = self.parseTerm()
+            #Cria o nó da expressão
             result = BinOp(operator, result, operand)
         return result
         
     def parseTerm(self):
+        #Determina o fator
         result = self.parseFactor()
+        #Verifica se o próximo token é um operador de Termo
         while self.current_token.type in ('MULTIPLY', 'DIVIDE', 'AND'):
+            #Determina o operador de Termo
             operator = self.current_token.type
             self.tokenizer.selectNext()
             self.current_token = self.tokenizer.next
+            #Determina o próximo fator
             operand = self.parseFactor()
+            #Cria o nó do termo
             result = BinOp(operator, result, operand)
         return result
     
     def parseFactor(self):
         self.current_token = self.tokenizer.next
         token_type = self.current_token.type
-        #Parse para número ou identificador
+        #Parse para número, identificador ou string
         if token_type in ["NUMBER", "IDENTIFIER", "STRING"]:
             value = self.current_token.value
             self.tokenizer.selectNext()
