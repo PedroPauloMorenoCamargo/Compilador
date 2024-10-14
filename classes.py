@@ -103,6 +103,8 @@ class Tokenizer:
             while self.position < len(self.source) and self.source[self.position] != '"':
                 string += self.source[self.position]
                 self.position += 1
+            if self.position >= len(self.source):
+                raise ValueError("String not closed")
             self.next = Token("STRING", string)
         elif caracter.isdigit():
             #Determina o número

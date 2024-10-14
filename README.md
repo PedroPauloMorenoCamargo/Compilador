@@ -32,11 +32,15 @@ IDENTIFIER = LETTER, { LETTER | DIGIT | "_" } ;
 
 NUMBER = DIGIT, { DIGIT } ;
 
-STRING = LETTER, {LETTER};
+STRING = LETTER, {CHARACTER};
 
 LETTER = ( a | ... | z | A | ... | Z ) ;
 
 DIGIT = ( 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 ) ;
+
+CHARACTER = LETTER | DIGIT | SPECIAL_CHARACTER ;
+
+SPECIAL_CHARACTER = ( " " | "!" | "@" | "#" | "$" | "%" | "^" | "&" | "*" | "(" | ")" | "-" | "_" | "+" | "=" | "{" | "}" | "[" | "]" | ":" | ";" | "'" | "<" | ">" | "," | "." | "?" | "/" | "\\" | "|" ) ;
 
 TYPE = ("INT" | "STR");
 

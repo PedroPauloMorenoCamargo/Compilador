@@ -1,6 +1,6 @@
 
 {
     /*Logical operators*/
-    int a, b;
-    printf(!a);
+    str a;
+    a = "A
 }
