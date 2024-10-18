@@ -2,6 +2,7 @@ from classes import *
 import sys
 from arvore import *
 
+# Verifica se o arquivo foi passado como argumento
 if len(sys.argv) < 2:
     print("Uso: python3 parser.py <arquivo.c>")
     sys.exit(1)

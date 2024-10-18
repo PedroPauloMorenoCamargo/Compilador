@@ -301,7 +301,7 @@ class Parser:
     
     def parseStatement(self):
         self.current_token = self.tokenizer.next
-        #Parse para printf ou identificador
+        #Parse para print, atribuição ou declaração
         if self.current_token.type in ["PRINTF","IDENTIFIER","TYPE"]:
             if self.current_token.type == "PRINTF":
                 result = self.parsePrintf()
