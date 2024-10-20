@@ -14,7 +14,6 @@ filename = sys.argv[1]
 
 file_out = filename.replace(".c", ".asm")
 
-print(file_out)
 
 # Lê o código do arquivo
 with open(filename, 'r') as file:

@@ -215,7 +215,6 @@ class While(Node):
     def Evaluate(self, assembly_code,symbol_table,label_generator):
         # Generate unique labels
         label_count = label_generator.get_label_count()
-        print(label_count)
         loop_label = f"LOOP_{label_count}"
         end_label = f"EXIT_{label_count}"
         assembly_code.append(f"{loop_label}:")
