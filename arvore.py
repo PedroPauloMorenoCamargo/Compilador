@@ -6,18 +6,8 @@ class Node(ABC):
         self.children = []
 
     @abstractmethod
-    def Evaluate(self, assembly_code, symbol_table, label_generator):
+    def Evaluate(self):
         pass
-
-class LabelGenerator:
-    def __init__(self):
-        self.counter = 0
-
-    def get_label(self, prefix):
-        label = f"{prefix}_{self.counter}"
-        self.counter += 1
-        return label
-
 
 class BinOp(Node):
     def __init__(self, op, left, right):
@@ -25,75 +15,52 @@ class BinOp(Node):
         self.children = [left, right]
 
     def Evaluate(self, assembly_code, symbol_table, label_generator):
-        # Evaluate the left side
-        self.children[0].Evaluate(assembly_code, symbol_table, label_generator)
-        assembly_code.append("PUSH EBX")
+        # Evaluate left operand
+        left_value, left_type = self.children[0].Evaluate(assembly_code, symbol_table, label_generator)
+        assembly_code.append(f"PUSH EBX")  # Save left operand (EBX)
+        # Evaluate right operand
+        right_value, right_type = self.children[1].Evaluate(assembly_code, symbol_table, label_generator)
+        assembly_code.append(f"POP EAX")   # Retrieve left operand into EAX
+        # Now, EAX = left operand, EBX = right operand
 
-        # Evaluate the right side
-        self.children[1].Evaluate(assembly_code, symbol_table, label_generator)
-        assembly_code.append("POP EAX")
-
-        #Realiza a operação
-        if self.value == 'PLUS':
-            #Adiciona o resultado ao lado esquerdo
-            assembly_code.append("ADD EAX, EBX")  
-        elif self.value == 'MINUS':
-            #Subtrai o resultado do lado direito do lado esquerdo
-            assembly_code.append("SUB EAX, EBX")  
-        elif self.value == 'MULTIPLY':
-            #Multiplica o resultado do lado direito pelo lado esquerdo
-            assembly_code.append("IMUL EAX, EBX") 
-        elif self.value == 'DIVIDE':
-            #Limpa o registrador EDX
-            assembly_code.append("MOV EDX, 0")
-            #Realiza a divisão 
-            assembly_code.append("DIV EBX")  
-
-        # Guarda o resultado no registrador EBX
-        assembly_code.append("MOV EBX, EAX")  
-        
-        return assembly_code
-
-
-
-
-class UnOp(Node):
-    def __init__(self, op, child):
-        super().__init__(op)
-        self.children = [child]
-
-    def Evaluate(self, symbol_table):
-        value, value_type = self.children[0].Evaluate(symbol_table)
-        #Possíveis operações unárias
-        operations = {
-            'PLUS': self._handle_plus,
-            'MINUS': self._handle_minus,
-            'NOT': self._handle_not
-        }
-        #Verifica se a operação é válida
-        if self.value in operations:
-            return operations[self.value](value, value_type)
+        if self.value == "PLUS":
+            assembly_code.append(f"ADD EAX, EBX")  # EAX = EAX + EBX
+            assembly_code.append(f"MOV EBX, EAX")  # Move result to EBX
+        elif self.value == "MINUS":
+            assembly_code.append(f"SUB EAX, EBX")  # EAX = EAX - EBX
+            assembly_code.append(f"MOV EBX, EAX")  # Move result to EBX
+        elif self.value == "EQUALS":
+            assembly_code.append(f"CMP EAX, EBX")  # Compare EAX and EBX
+            assembly_code.append(f"SETE AL")       # AL = 1 if EAX == EBX
+            assembly_code.append(f"MOVZX EBX, AL") # Zero-extend AL into EBX
+        elif self.value == "GREATER":
+            assembly_code.append(f"CMP EAX, EBX")  # Compare EAX and EBX
+            assembly_code.append(f"SETG AL")       # AL = 1 if EAX > EBX
+            assembly_code.append(f"MOVZX EBX, AL") # Zero-extend AL into EBX
+        elif self.value == "LESS":
+            assembly_code.append(f"CMP EAX, EBX")  # Compare EAX and EBX
+            assembly_code.append(f"SETL AL")       # AL = 1 if EAX < EBX
+            assembly_code.append(f"MOVZX EBX, AL") # Zero-extend AL into EBX
+        elif self.value == "AND":
+            assembly_code.append(f"CMP EAX, 0")    # Check if EAX is not zero
+            assembly_code.append(f"SETNE AL")      # AL = 1 if EAX != 0
+            assembly_code.append(f"CMP EBX, 0")    # Check if EBX is not zero
+            assembly_code.append(f"SETNE BL")      # BL = 1 if EBX != 0
+            assembly_code.append(f"AND AL, BL")    # AL = AL AND BL
+            assembly_code.append(f"MOVZX EBX, AL") # Zero-extend AL into EBX
+        elif self.value == "OR":
+            assembly_code.append(f"CMP EAX, 0")    # Check if EAX is not zero
+            assembly_code.append(f"SETNE AL")      # AL = 1 if EAX != 0
+            assembly_code.append(f"CMP EBX, 0")    # Check if EBX is not zero
+            assembly_code.append(f"SETNE BL")      # BL = 1 if EBX != 0
+            assembly_code.append(f"OR AL, BL")     # AL = AL OR BL
+            assembly_code.append(f"MOVZX EBX, AL") # Zero-extend AL into EBX
         else:
-            raise ValueError(f"Unknown unary operator: {self.value}")
-    #Funções que realizam as operações unárias
-    def _handle_plus(self, value, value_type):
-        self._validate_type(value_type, 'int')
-        return +value, 'int'
+            raise ValueError(f"Invalid operator '{self.value}'.")
+        # Do not overwrite EBX here for comparison and logical operations
 
-    def _handle_minus(self, value, value_type):
-        self._validate_type(value_type, 'int')
-        return -value, 'int'
-
-    def _handle_not(self, value, value_type):
-        if value_type == 'bool' or value_type == 'int':
-            return int(not value), 'bool'
-        raise TypeError(f"Unary 'not' not supported for type '{value_type}'")
-
-    def _validate_type(self, value_type, expected_type):
-        if value_type != expected_type:
-            raise TypeError(f"Unary operator not supported for type '{value_type}'")
-
-
+        # No need to move EAX to EBX here for comparison/logical operations
+        return None, 'int'
 
 
 
@@ -101,50 +68,41 @@ class IntVal(Node):
     def __init__(self, value):
         super().__init__(value)
 
-    def Evaluate(self, assembly_code, symbol_table, label_generator):
-        assembly_code.append(f"MOV EBX, {self.value} ; Evaluate IntVal")
+    def Evaluate(self,assembly_code,symbol_table,label_generator):
+        #Retorna o valor do nó
+        assembly_code.append(f"MOV EBX, {self.value}")
+        return self.value, 'int'
     
-class StrVal(Node):
-    def __init__(self, value):
-        super().__init__(value.strip('"'))
-    
-    def Evaluate(self, symbol_table):
-        return self.value, 'str'
-
-
 
 class Identifier(Node):
     def __init__(self, value):
         super().__init__(value)
 
     def Evaluate(self, assembly_code,symbol_table,label_generator):
+        # Get the variable's offset from the symbol table
+        offset, var_type = symbol_table.get(self.value)[1]
         #Retorna o valor da variável
+        assembly_code.append(f"MOV EBX, [EBP-{offset}]")
         return symbol_table.get(self.value)
-
 
 class Assign(Node):
     def __init__(self, identifier, expression):
         super().__init__()
         self.children = [identifier, expression]
 
-    def Evaluate(self, assembly_code, symbol_table, label_generator):
+    def Evaluate(self, assembly_code, symbol_table,label_generator):
         var_name = self.children[0].value
-        
-        # Checa se a variável foi declarada
+        # Check if the variable is declared
         if var_name not in symbol_table.symbols:
             raise ValueError(f"Variable '{var_name}' not declared.")
-
-        # Avalia a expressão
-        self.children[1].Evaluate(assembly_code, symbol_table, label_generator)  
-
-        # Obtém o offset da variável na pilha
-        offset = symbol_table.get_offset(var_name)
-
-        # Armazena o valor da expressão na variável
-        assembly_code.append(f"MOV [EBP-{offset}], EBX ; store the value in {var_name}")
-        return assembly_code
-
-
+        
+        # Get the variable's offset from the symbol table
+        offset, var_type = symbol_table.get(var_name)[1]
+        # Evaluate the expression
+        value, value_type = self.children[1].Evaluate(assembly_code, symbol_table,label_generator)
+        
+        assembly_code.append(f'MOV [EBP-{offset}], EBX')
+        return None, None
 
 
 class Declaration(Node):
@@ -153,43 +111,31 @@ class Declaration(Node):
         self.var_type = var_type
         self.declarations = declarations
 
-    def Evaluate(self, assembly_code, symbol_table, label_generator):
-        # Valores padrão para inicialização de variáveis
+    def Evaluate(self, assembly_code, symbol_table,label_generator):
+        # Default values for initialization
         default_values = {
             'int': 0,
-            'str': '' 
+            'str': ''
         }
 
         for var_name, expr in self.declarations:
-            # Checa se a variável já foi declarada
+            # Check if the variable is already declared
             if var_name in symbol_table.symbols:
                 raise ValueError(f"Variable '{var_name}' already declared.")
             
-            # Declara a variável na tabela de símbolos
-            symbol_table.declare(var_name, self.var_type)
-
-            # Aloca espaço na pilha para a variável
-            assembly_code.append(f"PUSH DWORD 0 ; allocate space for {var_name}")
-
-            # Inicializa a variável com o valor da expressão (se houver)
+            # Allocate space on the stack (4 bytes for int)
+            assembly_code.append(f'PUSH DWORD {default_values[self.var_type]}')
+            
+            # Store the variable in the symbol table with its stack position
+            # The offset from EBP for a new variable will depend on the current stack pointer
+            offset = (len(symbol_table.symbols) + 1) * 4
+            symbol_table.set(var_name, (offset, self.var_type))
+            
             if expr is not None:
-                # Avalia a expressão (que armazenará o resultado em EBX)
-                expr.Evaluate(assembly_code, symbol_table, None)
-
-                # Obtem o offset da variável na pilha
-                offset = symbol_table.get_offset(var_name)
-
-                # Guarda o valor da expressão na variável
-                assembly_code.append(f"MOV [EBP-{offset}], EBX ; initialize {var_name} with the expression value")
-            else:
-                # Obtem o offset da variável na pilha
-                offset = symbol_table.get_offset(var_name)
-                default_value = default_values[self.var_type]
-                # Inicializa a variável com um valor padrão
-                assembly_code.append(f"MOV EBX, {default_value} ; default initialization for {var_name}")
-                assembly_code.append(f"MOV [EBP-{offset}], EBX ; store default value in {var_name}")
-
-        return assembly_code
+                # Evaluate the expression and store its result in the variable's stack location
+                value, value_type = expr.Evaluate(assembly_code, symbol_table,label_generator)
+                assembly_code.append(f'MOV DWORD [EBP-{offset}], {value}')
+        return None, None
 
 
 
@@ -198,16 +144,12 @@ class Print(Node):
         super().__init__()
         self.children = [expression]
 
-    def Evaluate(self, assembly_code, symbol_table, label_generator):
-        # Evaluate the expression (result in EBX)
-        self.children[0].Evaluate(assembly_code, symbol_table, label_generator)  
-
-        # Call the print subroutine
-        assembly_code.append("CALL print ; Call the print subroutine")
-
-        return assembly_code
-
-
+    def Evaluate(self, assembly_code,symbol_table,label_generator):
+        value, type = self.children[0].Evaluate(assembly_code,symbol_table,label_generator)
+        assembly_code.append(f"PUSH EBX")
+        assembly_code.append(f"CALL print")
+        assembly_code.append(f"POP EBX")
+        return None, None
 
 
 
@@ -216,23 +158,12 @@ class Statements(Node):
         super().__init__()
         self.children = []
 
-    def Evaluate(self, assembly_code, symbol_table, label_generator):
+    def Evaluate(self,assembly_code, symbol_table,label_generator):
         # Avalia cada nó filho
         for child in self.children:
-            child.Evaluate(assembly_code, symbol_table, label_generator)  
-        return assembly_code
+            child.Evaluate(assembly_code,symbol_table,label_generator)
+        return None, None  
 
-
-
-
-class NoOp(Node):
-    def __init__(self):
-        super().__init__()
-
-    def Evaluate(self,symbol_table):
-        #Faz nada
-        return 0    
-    
 
 class If(Node):
     def __init__(self, condition, true_block, false_block=None):
@@ -243,48 +174,56 @@ class If(Node):
 
     def Evaluate(self, assembly_code, symbol_table, label_generator):
         # Generate unique labels
-        else_label = label_generator.get_label("ELSE")
-        end_label = label_generator.get_label("END_IF")
-
+        label_count = label_generator.get_label_count()
+        false_label = f"ELSE_{label_count}"
+        end_label = f"END_IF_{label_count}"
+        
         # Evaluate the condition
-        self.children[0].Evaluate(assembly_code, symbol_table, label_generator)
-        assembly_code.append("CMP EBX, 0 ; Check if the condition is false")
-        assembly_code.append(f"JE {else_label} ; Jump to else if condition is false")
-
-        # Evaluate the true block
-        self.children[1].Evaluate(assembly_code, symbol_table, label_generator)
-        assembly_code.append(f"JMP {end_label} ; Skip the else block")
-
-        # Else block
-        assembly_code.append(f"{else_label}: ; Else block start")
+        condition_value, condition_type = self.children[0].Evaluate(assembly_code, symbol_table, label_generator)
+        
+        # The result of the condition is assumed to be in EBX
+        # Compare the condition result with 0
+        assembly_code.append(f"CMP EBX, 0")
+        
         if len(self.children) == 3:
+            # If there's an else block
+            assembly_code.append(f"JE {false_label}")  # Jump to else block if condition is false
+            # True block
+            self.children[1].Evaluate(assembly_code, symbol_table, label_generator)
+            assembly_code.append(f"JMP {end_label}")   # Jump to end after true block
+            # Else block
+            assembly_code.append(f"{false_label}:")
             self.children[2].Evaluate(assembly_code, symbol_table, label_generator)
+            # End label
+            assembly_code.append(f"{end_label}:")
+        else:
+            # No else block
+            assembly_code.append(f"JE {end_label}")    # Jump to end if condition is false
+            # True block
+            self.children[1].Evaluate(assembly_code, symbol_table, label_generator)
+            # End label
+            assembly_code.append(f"{end_label}:")
+        
+        return None, None
 
-        # End of if statement
-        assembly_code.append(f"{end_label}: ; End of the if statement")
 
 class While(Node):
     def __init__(self, condition, block):
         super().__init__()
         self.children = [condition, block]
 
-    def Evaluate(self, assembly_code, symbol_table, label_generator):
+    def Evaluate(self, assembly_code,symbol_table,label_generator):
         # Generate unique labels
-        start_label = label_generator.get_label("LOOP")
-        end_label = label_generator.get_label("EXIT")
-
-        # Start of the loop
-        assembly_code.append(f"{start_label}: ; Start of the while loop")
-
-        # Evaluate the condition
-        self.children[0].Evaluate(assembly_code, symbol_table, label_generator)
-        assembly_code.append("CMP EBX, 0 ; Check if the condition is false")
-        assembly_code.append(f"JE {end_label} ; Jump to exit if the condition is false")
-
-        # Evaluate the loop body
-        self.children[1].Evaluate(assembly_code, symbol_table, label_generator)
-        assembly_code.append(f"JMP {start_label} ; Jump back to the start of the loop")
-
-        # End of the loop
-        assembly_code.append(f"{end_label}: ; End of the while loop")
+        label_count = label_generator.get_label_count()
+        print(label_count)
+        loop_label = f"LOOP_{label_count}"
+        end_label = f"EXIT_{label_count}"
+        assembly_code.append(f"{loop_label}:")
+        condition_value, condition_type = self.children[0].Evaluate(assembly_code,symbol_table,label_generator)
+        assembly_code.append(f"CMP EBX, 0")
+        assembly_code.append(f"JE {end_label}")
+        self.children[1].Evaluate(assembly_code,symbol_table,label_generator)
+        assembly_code.append(f"JMP {loop_label}")
+        assembly_code.append(f"{end_label}:")
+        return None, None  
 

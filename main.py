@@ -35,35 +35,37 @@ symbol_table = SymbolTable()
 # Cria uma lista para armazenar o código assembly gerado
 assembly_code = []
 
-# Create the LabelGenerator instance
-label_generator = LabelGenerator()
-
+# Cria um contador de labels
+label_generator = Label_Generator()
 # Avalia a árvore sintática e gera o código assembly
 if ast:
     # Pass all the necessary arguments (assembly_code, symbol_table, label_counter)
-    ast.Evaluate(assembly_code, symbol_table, label_generator)
+    ast.Evaluate(assembly_code, symbol_table,label_generator)
 
 
 
 
 # Assembly code header
-assembly_header = """
-SECTION .data
+assembly_header = """SECTION .data
     ten     dd 10
+    newline db 10          ; Newline character (ASCII code 10)
 
 SECTION .bss
     number  resb 12
 
 SECTION .text
-    global main
+    global _start
 
-main:
+_start:
     PUSH EBP
     MOV EBP, ESP
 """
 
-# Assembly code footer
-assembly_footer = """
+assembly_footer = """    MOV ESP, EBP
+    POP EBP
+    MOV EAX, 1     
+    MOV EBX, 0       
+    INT 0x80
 print:
     PUSH EBP
     MOV EBP, ESP
@@ -72,17 +74,18 @@ print:
     PUSH ECX
     PUSH EDX
 
-    MOV ECX, number + 11
-    MOV BYTE [ECX], 0
+    MOV ECX, number + 11     ; Point ECX to the end of the buffer
+    MOV BYTE [ECX], 0        ; Null-terminate the string
 
-    MOV EAX, EBX
+    MOV EAX, EBX             ; EAX contains the value to print
 
     CMP EAX, 0
     JNE print_check_sign
 
+    ; Handle zero case
     DEC ECX
     MOV BYTE [ECX], '0'
-    JMP print_write
+    JMP print_write_setup    ; Jump to print_write_setup instead of print_write
 
 print_check_sign:
     CMP EAX, 0
@@ -103,8 +106,8 @@ print_convert_setup:
 print_convert_loop:
     XOR EDX, EDX
     DIV DWORD [ten]
-    ADD EDX, '0'
-    MOV [ECX], DL
+    ADD EDX, '0'             ; Convert digit to ASCII
+    MOV [ECX], DL            ; Store digit in buffer
     DEC ECX
     CMP EAX, 0
     JNE print_convert_loop
@@ -117,14 +120,16 @@ print_convert_loop:
     MOV EBX, number
 
 print_write_setup:
-    MOV EDX, number + 11
-    SUB EDX, ECX
+    MOV EDX, number + 11     ; EDX = address at the end of buffer
+    SUB EDX, ECX             ; EDX = length of the string
+    ; At this point, ECX points to the start of the string
+    ; EDX contains the length of the string
 
 print_write:
-    MOV EAX, 4
-    MOV EBX, 1
-    MOV ECX, ECX
-    INT 0x80
+    MOV EAX, 4               ; sys_write
+    MOV EBX, 1               ; stdout
+    ; ECX already points to the buffer
+    INT 0x80                 ; Make system call
 
     POP EDX
     POP ECX
@@ -133,9 +138,9 @@ print_write:
     MOV ESP, EBP
     POP EBP
     RET
+
+
 """
-
-
 # Função para escrever o código assembly gerado em um arquivo
 def write_assembly_to_file(assembly_code, output_filename):
     # Write the assembly code to the file
