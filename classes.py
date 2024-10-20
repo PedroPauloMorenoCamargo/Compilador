@@ -10,19 +10,49 @@ class PrePro:
 
 class SymbolTable:
     def __init__(self):
-        # Dicionário para armazenar as variáveis
+        # Dicionário para armazenar as variáveis e seus tipos e offsets
         self.symbols = {}
+        self.next_offset = 4  # Start allocating stack space with offset 4 bytes from EBP
 
     def get(self, name):
-        # Retorna o valor da variável se ela existir caso contrário, levanta um erro
+        # Retorna o valor da variável se ela existir, caso contrário, levanta um erro
         if name in self.symbols:
-            return self.symbols[name]
+            return self.symbols[name]['value']
         else:
             raise ValueError(f"Undefined variable '{name}'")
 
-    def set(self, name, value_type):
-        # Define o valor da variável
-        self.symbols[name] = value_type
+    def set(self, name, value):
+        # Define o valor da variável, mantendo o tipo e o offset
+        if name in self.symbols:
+            self.symbols[name]['value'] = value  # Update only the value of the variable
+        else:
+            raise ValueError(f"Variable '{name}' not declared.")
+
+    def declare(self, name, var_type):
+        # Declara uma nova variável com o tipo e aloca espaço na pilha
+        if name in self.symbols:
+            raise ValueError(f"Variable '{name}' already declared.")
+        
+        # Armazena o tipo, offset e valor padrão
+        self.symbols[name] = {'type': var_type, 'offset': self.next_offset, 'value': None}
+        
+        # Incrementa o offset para a próxima variável
+        self.next_offset += 4
+
+    def get_offset(self, name):
+        # Retorna o offset da variável
+        if name in self.symbols:
+            return self.symbols[name]['offset']
+        else:
+            raise ValueError(f"Undefined variable '{name}'")
+
+    def get_type(self, name):
+        # Retorna o tipo da variável
+        if name in self.symbols:
+            return self.symbols[name]['type']
+        else:
+            raise ValueError(f"Undefined variable '{name}'")
+
 
 class Token:
     def __init__(self, token_type, value):

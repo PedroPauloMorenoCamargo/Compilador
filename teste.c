@@ -1,6 +1,7 @@
 
 {
     /*Logical operators*/
-    str a;
-    a = scanf();
+    int x;
+    x = 10;
+    printf(x);
 }
