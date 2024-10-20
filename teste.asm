@@ -11,20 +11,10 @@ SECTION .text
 main:
     PUSH EBP            ; Set up stack frame
     MOV EBP, ESP
-    PUSH DWORD 0 ; allocate space for x
-    MOV EBX, 0 ; default initialization for x
-    MOV [EBP-4], EBX ; store default value in x
-    MOV EBX, 10 ; Evaluate IntVal
-    MOV [EBP-4], EBX ; store the value in x
-    PUSH DWORD 0 ; allocate space for y
-    MOV EBX, 0 ; default initialization for y
-    MOV [EBP-8], EBX ; store default value in y
-    PUSH EBX
-    MOV EBX, 5 ; Evaluate IntVal
-    POP EAX
-    SUB EAX, EBX
-    MOV EBX, EAX
-    MOV [EBP-8], EBX ; store the value in y
+    MOV EBX, 555 ; Evaluate IntVal
+    PUSH EBX ; Push the value to be printed onto the stack
+    CALL print ; Call the print subroutine
+    POP EBX ; Clean up the stack after the print
 
     MOV ESP, EBP        ; Clean up stack frame
     POP EBP
@@ -41,38 +31,67 @@ print:
     PUSH ECX
     PUSH EDX
 
-    ; Convert integer in EBX to string
-    MOV EAX, EBX        ; Move the integer to EAX for division
+    ; Initialize pointers
     MOV ECX, number + 11 ; Point ECX to the end of the buffer
     MOV BYTE [ECX], 0    ; Null-terminate the string
-    DEC ECX              ; Move to the previous character
 
-    ; Handle zero case
+    ; Move the number to EAX
+    MOV EAX, EBX
+
+    ; Check if number is zero
     CMP EAX, 0
-    JNE print_loop
+    JNE print_check_sign
+    ; Handle zero
+    DEC ECX
     MOV BYTE [ECX], '0'
-    DEC ECX
-    JMP print_end_loop
+    JMP print_write
 
-print_loop:
+print_check_sign:
+    ; Check if number is negative
+    CMP EAX, 0
+    JGE print_convert
+    ; Handle negative number
+    NEG EAX                ; Make EAX positive
+    MOV BYTE [number], '-' ; Store the '-' sign
+    MOV EBX, number        ; EBX points to the buffer start
+    INC EBX                ; Move past the '-'
+    JMP print_convert_setup
+
+print_convert:
+    MOV EBX, number        ; EBX points to the buffer start
+
+print_convert_setup:
+    ; Start converting digits
+    DEC ECX
+
+print_convert_loop:
     XOR EDX, EDX
-    DIV DWORD [ten]      ; Divide EAX by 10
-    ADD EDX, '0'         ; Convert remainder to ASCII
-    MOV [ECX], DL        ; Store character in buffer
+    DIV DWORD [ten]        ; EAX = EAX / 10, EDX = remainder
+    ADD EDX, '0'           ; Convert remainder to ASCII
+    MOV [ECX], DL          ; Store character
     DEC ECX
     CMP EAX, 0
-    JNE print_loop
+    JNE print_convert_loop
 
-print_end_loop:
-    INC ECX              ; Move ECX to the start of the string
+    INC ECX                ; Adjust ECX to point to the first digit
 
+    ; Check if negative
+    CMP BYTE [number], '-'
+    JNE print_write_setup
+    ; Adjust EBX to include '-'
+    MOV EBX, number
+
+print_write_setup:
+    ; Adjust EDX to length of the string
+    MOV EDX, number + 11
+    SUB EDX, ECX           ; Length = end - start
+
+print_write:
     ; Write the string to stdout
-    MOV EAX, 4           ; sys_write
-    MOV EBX, 1           ; stdout
-    MOV EDX, number + 11 ; End of buffer
-    SUB EDX, ECX         ; Length of the string
-    MOV ECX, ECX         ; Pointer to the string
-    INT 0x80             ; Make the system call
+    MOV EAX, 4             ; sys_write
+    MOV EBX, 1             ; stdout
+    MOV ECX, ECX           ; Pointer to the string
+    INT 0x80               ; Make the system call
 
     ; Restore registers
     POP EDX

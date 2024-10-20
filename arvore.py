@@ -199,17 +199,11 @@ class Print(Node):
         self.children = [expression]
 
     def Evaluate(self, assembly_code, symbol_table, label_generator):
-        # Avalia a expressão (que armazenará o resultado em EBX)
+        # Evaluate the expression (result in EBX)
         self.children[0].Evaluate(assembly_code, symbol_table, label_generator)  
 
-        # Push o valor a ser impresso na pilha
-        assembly_code.append("PUSH EBX ; Push the value to be printed onto the stack")
-
-        # Chama a função de impressão
+        # Call the print subroutine
         assembly_code.append("CALL print ; Call the print subroutine")
-
-        # Limpa o valor da pilha após a impressão
-        assembly_code.append("POP EBX ; Clean up the stack after the print")
 
         return assembly_code
 
