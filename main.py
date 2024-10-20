@@ -47,7 +47,3 @@ def write_assembly_to_file(assembly_code, output_filename=sys.argv[2]):
 output_filename = sys.argv[2]
 write_assembly_to_file(assembly_code, output_filename)
 
-# Opcionalmente, você pode também imprimir o código assembly no terminal
-print("Generated assembly code:")
-for line in assembly_code:
-    print(line)
