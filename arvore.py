@@ -6,25 +6,32 @@ class Node(ABC):
         self.children = []
 
     @abstractmethod
-    def Evaluate(self):
+    def Evaluate(self, assembly_code, symbol_table, label_generator):
         pass
+
+class LabelGenerator:
+    def __init__(self):
+        self.counter = 0
+
+    def get_label(self, prefix):
+        label = f"{prefix}_{self.counter}"
+        self.counter += 1
+        return label
+
 
 class BinOp(Node):
     def __init__(self, op, left, right):
         super().__init__(op)
         self.children = [left, right]
 
-    def Evaluate(self, assembly_code, symbol_table, label_counter):
-        #Evaluate do lado esquerdo
-        self.children[0].Evaluate(assembly_code, symbol_table, label_counter)
-        #Push do resultado no stack
-        assembly_code.append("PUSH EBX")  
-        
-        #Evaluate do lado direito
-        self.children[1].Evaluate(assembly_code, symbol_table, label_counter)
-        
-        #Pop do lado esquerdo
-        assembly_code.append("POP EAX")  
+    def Evaluate(self, assembly_code, symbol_table, label_generator):
+        # Evaluate the left side
+        self.children[0].Evaluate(assembly_code, symbol_table, label_generator)
+        assembly_code.append("PUSH EBX")
+
+        # Evaluate the right side
+        self.children[1].Evaluate(assembly_code, symbol_table, label_generator)
+        assembly_code.append("POP EAX")
 
         #Realiza a operação
         if self.value == 'PLUS':
@@ -94,11 +101,8 @@ class IntVal(Node):
     def __init__(self, value):
         super().__init__(value)
 
-    def Evaluate(self, assembly_code, symbol_table, label_counter):
-        # Guarda o valor no registrador EBX
-        assembly_code.append(f"MOV EBX, {self.value} ; Evaluate do IntVal")
-        return assembly_code
-
+    def Evaluate(self, assembly_code, symbol_table, label_generator):
+        assembly_code.append(f"MOV EBX, {self.value} ; Evaluate IntVal")
     
 class StrVal(Node):
     def __init__(self, value):
@@ -113,7 +117,7 @@ class Identifier(Node):
     def __init__(self, value):
         super().__init__(value)
 
-    def Evaluate(self, assembly_code,symbol_table, label_counter):
+    def Evaluate(self, assembly_code,symbol_table,label_generator):
         #Retorna o valor da variável
         return symbol_table.get(self.value)
 
@@ -123,7 +127,7 @@ class Assign(Node):
         super().__init__()
         self.children = [identifier, expression]
 
-    def Evaluate(self, assembly_code, symbol_table, label_counter):
+    def Evaluate(self, assembly_code, symbol_table, label_generator):
         var_name = self.children[0].value
         
         # Checa se a variável foi declarada
@@ -131,7 +135,7 @@ class Assign(Node):
             raise ValueError(f"Variable '{var_name}' not declared.")
 
         # Avalia a expressão
-        self.children[1].Evaluate(assembly_code, symbol_table, label_counter)  
+        self.children[1].Evaluate(assembly_code, symbol_table, label_generator)  
 
         # Obtém o offset da variável na pilha
         offset = symbol_table.get_offset(var_name)
@@ -149,7 +153,7 @@ class Declaration(Node):
         self.var_type = var_type
         self.declarations = declarations
 
-    def Evaluate(self, assembly_code, symbol_table, label_counter):
+    def Evaluate(self, assembly_code, symbol_table, label_generator):
         # Valores padrão para inicialização de variáveis
         default_values = {
             'int': 0,
@@ -194,9 +198,9 @@ class Print(Node):
         super().__init__()
         self.children = [expression]
 
-    def Evaluate(self, assembly_code, symbol_table, label_counter):
+    def Evaluate(self, assembly_code, symbol_table, label_generator):
         # Avalia a expressão (que armazenará o resultado em EBX)
-        self.children[0].Evaluate(assembly_code, symbol_table, label_counter)  
+        self.children[0].Evaluate(assembly_code, symbol_table, label_generator)  
 
         # Push o valor a ser impresso na pilha
         assembly_code.append("PUSH EBX ; Push the value to be printed onto the stack")
@@ -218,10 +222,10 @@ class Statements(Node):
         super().__init__()
         self.children = []
 
-    def Evaluate(self, assembly_code, symbol_table, label_counter):
+    def Evaluate(self, assembly_code, symbol_table, label_generator):
         # Avalia cada nó filho
         for child in self.children:
-            child.Evaluate(assembly_code, symbol_table, label_counter)  
+            child.Evaluate(assembly_code, symbol_table, label_generator)  
         return assembly_code
 
 
@@ -243,70 +247,50 @@ class If(Node):
         if false_block:
             self.children.append(false_block)
 
-    def Evaluate(self, assembly_code, symbol_table, label_counter):
-        # Criar labels únicas para o início, else e fim do if
-        else_label = f"ELSE_{label_counter}"
-        end_label = f"END_IF_{label_counter}"
-        label_counter += 1
+    def Evaluate(self, assembly_code, symbol_table, label_generator):
+        # Generate unique labels
+        else_label = label_generator.get_label("ELSE")
+        end_label = label_generator.get_label("END_IF")
 
-        # Avaliar a condição
-        self.children[0].Evaluate(assembly_code, symbol_table, label_counter)
-
-        # Compare o resultado da condição (EBX) com False (0)
+        # Evaluate the condition
+        self.children[0].Evaluate(assembly_code, symbol_table, label_generator)
         assembly_code.append("CMP EBX, 0 ; Check if the condition is false")
-
-        # Pulando para o else se a condição for falsa
         assembly_code.append(f"JE {else_label} ; Jump to else if condition is false")
 
-        # Avaliar o bloco verdadeiro
-        self.children[1].Evaluate(assembly_code, symbol_table, label_counter)
-
-        # Pulando para o fim do if após o bloco verdadeiro
+        # Evaluate the true block
+        self.children[1].Evaluate(assembly_code, symbol_table, label_generator)
         assembly_code.append(f"JMP {end_label} ; Skip the else block")
 
-        # Adiciona a label do else
+        # Else block
         assembly_code.append(f"{else_label}: ; Else block start")
-        
-        # Avaliar o bloco falso (se houver)
         if len(self.children) == 3:
-            self.children[2].Evaluate(assembly_code, symbol_table, label_counter)
+            self.children[2].Evaluate(assembly_code, symbol_table, label_generator)
 
-        # Adiciona a label do fim do if
+        # End of if statement
         assembly_code.append(f"{end_label}: ; End of the if statement")
-
-        return assembly_code,label_counter
 
 class While(Node):
     def __init__(self, condition, block):
         super().__init__()
         self.children = [condition, block]
 
-    def Evaluate(self, assembly_code, symbol_table, label_counter):
-        # Cria labels únicos para o início e fim do loop
-        start_label = f"LOOP_{label_counter}"
-        end_label = f"EXIT_{label_counter}"
-        label_counter += 1
+    def Evaluate(self, assembly_code, symbol_table, label_generator):
+        # Generate unique labels
+        start_label = label_generator.get_label("LOOP")
+        end_label = label_generator.get_label("EXIT")
 
-        # Adiciona a label de início do loop
+        # Start of the loop
         assembly_code.append(f"{start_label}: ; Start of the while loop")
 
-        # Avalia a condição
-        self.children[0].Evaluate(assembly_code, symbol_table, label_counter)
-        
-        # Compara o resultado da condição (EBX) com False (0)
+        # Evaluate the condition
+        self.children[0].Evaluate(assembly_code, symbol_table, label_generator)
         assembly_code.append("CMP EBX, 0 ; Check if the condition is false")
-
-        # Pula para o fim do loop se a condição
         assembly_code.append(f"JE {end_label} ; Jump to exit if the condition is false")
 
-        # Avalia o bloco do loop
-        self.children[1].Evaluate(assembly_code, symbol_table, label_counter)
-
-        # Pulando de volta para o início do loop
+        # Evaluate the loop body
+        self.children[1].Evaluate(assembly_code, symbol_table, label_generator)
         assembly_code.append(f"JMP {start_label} ; Jump back to the start of the loop")
 
-        # Adiciona a label de fim do loop
+        # End of the loop
         assembly_code.append(f"{end_label}: ; End of the while loop")
-
-        return assembly_code, label_counter
 

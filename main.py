@@ -35,13 +35,13 @@ symbol_table = SymbolTable()
 # Cria uma lista para armazenar o código assembly gerado
 assembly_code = []
 
-# Inicializa o contador de labels
-label_counter = 0
+# Create the LabelGenerator instance
+label_generator = LabelGenerator()
 
 # Avalia a árvore sintática e gera o código assembly
 if ast:
     # Pass all the necessary arguments (assembly_code, symbol_table, label_counter)
-    ast.Evaluate(assembly_code, symbol_table, label_counter)
+    ast.Evaluate(assembly_code, symbol_table, label_generator)
 
 # Função para escrever o código assembly gerado em um arquivo
 def write_assembly_to_file(assembly_code, output_filename):
