@@ -53,9 +53,9 @@ SECTION .bss
     number  resb 12
 
 SECTION .text
-    global _start
+    global main
 
-_start:
+main:
     PUSH EBP
     MOV EBP, ESP
 """
