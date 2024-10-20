@@ -45,7 +45,7 @@ class BinOp(Node):
         # Guarda o resultado no registrador EBX
         assembly_code.append("MOV EBX, EAX")  
         
-        return assembly_code , label_counter
+        return assembly_code
 
 
 
@@ -97,7 +97,7 @@ class IntVal(Node):
     def Evaluate(self, assembly_code, symbol_table, label_counter):
         # Guarda o valor no registrador EBX
         assembly_code.append(f"MOV EBX, {self.value} ; Evaluate do IntVal")
-        return assembly_code, label_counter
+        return assembly_code
 
     
 class StrVal(Node):
@@ -115,7 +115,7 @@ class Identifier(Node):
 
     def Evaluate(self, assembly_code,symbol_table, label_counter):
         #Retorna o valor da variável
-        return symbol_table.get(self.value) ,label_counter
+        return symbol_table.get(self.value)
 
 
 class Assign(Node):
@@ -138,7 +138,7 @@ class Assign(Node):
 
         # Armazena o valor da expressão na variável
         assembly_code.append(f"MOV [EBP-{offset}], EBX ; store the value in {var_name}")
-        return assembly_code, label_counter
+        return assembly_code
 
 
 
@@ -185,7 +185,7 @@ class Declaration(Node):
                 assembly_code.append(f"MOV EBX, {default_value} ; default initialization for {var_name}")
                 assembly_code.append(f"MOV [EBP-{offset}], EBX ; store default value in {var_name}")
 
-        return assembly_code, label_counter
+        return assembly_code
 
 
 
@@ -207,7 +207,7 @@ class Print(Node):
         # Limpa o valor da pilha após a impressão
         assembly_code.append("POP EBX ; Clean up the stack after the print")
 
-        return assembly_code, label_counter
+        return assembly_code
 
 
 
@@ -222,7 +222,7 @@ class Statements(Node):
         # Avalia cada nó filho
         for child in self.children:
             child.Evaluate(assembly_code, symbol_table, label_counter)  
-        return assembly_code, label_counter
+        return assembly_code
 
 
 
