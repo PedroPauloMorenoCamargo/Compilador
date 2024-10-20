@@ -15,94 +15,36 @@ class BinOp(Node):
         self.children = [left, right]
 
     def Evaluate(self, assembly_code, symbol_table, label_counter):
-        # Avalia o lado esquerdo
+        #Evaluate do lado esquerdo
         self.children[0].Evaluate(assembly_code, symbol_table, label_counter)
-        assembly_code.append("PUSH EBX")  # Guarda o resultado no stack
-
-        # Avalia o lado direito
+        #Push do resultado no stack
+        assembly_code.append("PUSH EBX")  
+        
+        #Evaluate do lado direito
         self.children[1].Evaluate(assembly_code, symbol_table, label_counter)
-        assembly_code.append("POP EAX")  # Recupera o lado esquerdo do stack
+        
+        #Pop do lado esquerdo
+        assembly_code.append("POP EAX")  
 
-        # Realiza a operação
+        #Realiza a operação
         if self.value == 'PLUS':
+            #Adiciona o resultado ao lado esquerdo
             assembly_code.append("ADD EAX, EBX")  
         elif self.value == 'MINUS':
+            #Subtrai o resultado do lado direito do lado esquerdo
             assembly_code.append("SUB EAX, EBX")  
         elif self.value == 'MULTIPLY':
+            #Multiplica o resultado do lado direito pelo lado esquerdo
             assembly_code.append("IMUL EAX, EBX") 
         elif self.value == 'DIVIDE':
+            #Limpa o registrador EDX
             assembly_code.append("MOV EDX, 0")
+            #Realiza a divisão 
             assembly_code.append("DIV EBX")  
-        
-        # Comparações
-        elif self.value == 'EQUALS':
-            assembly_code.append("CMP EAX, EBX")
-            label_true = f"LABEL_TRUE_{label_counter[0]}"
-            label_end = f"LABEL_END_{label_counter[0]}"
-            assembly_code.append(f"JE {label_true}")
-            assembly_code.append("MOV EBX, 0")  # Falso (0)
-            assembly_code.append(f"JMP {label_end}")
-            assembly_code.append(f"{label_true}:")
-            assembly_code.append("MOV EBX, 1")  # Verdadeiro (1)
-            assembly_code.append(f"{label_end}:")
-            label_counter[0] += 1
-        
-        elif self.value == 'LESS_THAN':
-            assembly_code.append("CMP EAX, EBX")
-            label_true = f"LABEL_TRUE_{label_counter[0]}"
-            label_end = f"LABEL_END_{label_counter[0]}"
-            assembly_code.append(f"JL {label_true}")
-            assembly_code.append("MOV EBX, 0")  # Falso (0)
-            assembly_code.append(f"JMP {label_end}")
-            assembly_code.append(f"{label_true}:")
-            assembly_code.append("MOV EBX, 1")  # Verdadeiro (1)
-            assembly_code.append(f"{label_end}:")
-            label_counter[0] += 1
 
-        elif self.value == 'GREATER_THAN':
-            assembly_code.append("CMP EAX, EBX")
-            label_true = f"LABEL_TRUE_{label_counter[0]}"
-            label_end = f"LABEL_END_{label_counter[0]}"
-            assembly_code.append(f"JG {label_true}")
-            assembly_code.append("MOV EBX, 0")  # Falso (0)
-            assembly_code.append(f"JMP {label_end}")
-            assembly_code.append(f"{label_true}:")
-            assembly_code.append("MOV EBX, 1")  # Verdadeiro (1)
-            assembly_code.append(f"{label_end}:")
-            label_counter[0] += 1
-        
-        # Operações lógicas
-        elif self.value == 'AND':
-            label_false = f"LABEL_FALSE_{label_counter[0]}"
-            label_end = f"LABEL_END_{label_counter[0]}"
-            assembly_code.append("CMP EAX, 0")
-            assembly_code.append(f"JE {label_false}")  # Se EAX é 0, pular para falso
-            assembly_code.append("CMP EBX, 0")
-            assembly_code.append(f"JE {label_false}")  # Se EBX é 0, pular para falso
-            assembly_code.append("MOV EBX, 1")  # Verdadeiro (1)
-            assembly_code.append(f"JMP {label_end}")
-            assembly_code.append(f"{label_false}:")
-            assembly_code.append("MOV EBX, 0")  # Falso (0)
-            assembly_code.append(f"{label_end}:")
-            label_counter[0] += 1
-
-        elif self.value == 'OR':
-            label_true = f"LABEL_TRUE_{label_counter[0]}"
-            label_end = f"LABEL_END_{label_counter[0]}"
-            assembly_code.append("CMP EAX, 0")
-            assembly_code.append(f"JNE {label_true}")  # Se EAX não é 0, pular para verdadeiro
-            assembly_code.append("CMP EBX, 0")
-            assembly_code.append(f"JNE {label_true}")  # Se EBX não é 0, pular para verdadeiro
-            assembly_code.append("MOV EBX, 0")  # Falso (0)
-            assembly_code.append(f"JMP {label_end}")
-            assembly_code.append(f"{label_true}:")
-            assembly_code.append("MOV EBX, 1")  # Verdadeiro (1)
-            assembly_code.append(f"{label_end}:")
-            label_counter[0] += 1
-
-        # Guarda o resultado em EBX
+        # Guarda o resultado no registrador EBX
         assembly_code.append("MOV EBX, EAX")  
-
+        
         return assembly_code
 
 
