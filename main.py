@@ -20,8 +20,11 @@ filtered_code = PrePro.filter(code)
 parser = Parser()
 # Cria a árvore sintática
 ast = parser.run(filtered_code)
-# Cria a tabela de símbolos
-symbol_table = SymbolTable()
+
+# Cria FuncTable e SymbolTable
+funcTable = FuncTable()
+symbolTable = SymbolTable()
+
 # Avalia a árvore sintática
 if ast:
-    ast.Evaluate(symbol_table)
+    ast.Evaluate(funcTable, symbolTable)

@@ -8,21 +8,22 @@ class PrePro:
         # Remove spaces and newlines
         return ''.join(source)
 
-class SymbolTable:
-    def __init__(self):
-        # Dicionário para armazenar as variáveis
-        self.symbols = {}
 
-    def get(self, name):
-        # Retorna o valor da variável se ela existir caso contrário, levanta um erro
-        if name in self.symbols:
-            return self.symbols[name]
-        else:
-            raise ValueError(f"Undefined variable '{name}'")
+class FuncTable:
+    functions = {}
 
-    def set(self, name, value_type):
-        # Define o valor da variável
-        self.symbols[name] = value_type
+    @staticmethod
+    def set(name, func_node):
+        if name in FuncTable.functions:
+            raise ValueError(f"Function '{name}' already declared.")
+        FuncTable.functions[name] = func_node
+
+    @staticmethod
+    def get(name):
+        if name not in FuncTable.functions:
+            raise ValueError(f"Function '{name}' not declared.")
+        return FuncTable.functions[name]
+
 
 class Token:
     def __init__(self, token_type, value):
@@ -127,7 +128,9 @@ class Tokenizer:
                 "scanf": "SCANF",
                 "printf": "PRINTF",
                 "int": "TYPE",
-                "str": "TYPE"
+                "str": "TYPE",
+                "void": "FUNC_TYPE",
+                "return": "RETURN"
             }
             if identificador in keywords:
                 self.next = Token(keywords[identificador], identificador)
@@ -144,6 +147,56 @@ class Parser:
         self.tokenizer = None
         self.current_token = None
 
+    def parseProgram(self):
+        functions = Program()
+        #Loopa Até o fim do código
+        while self.tokenizer.next.type != 'EOF':
+            #Pega a função
+            functions.children.append(self.parseFunction())
+            self.tokenizer.selectNext()
+        #Chama a função main
+        functions.children.append(FuncCall("main", []))
+        return functions
+    
+    def parseFunction(self):
+        #Verifica se a função tem tipo
+        if self.tokenizer.next.type != 'TYPE' and self.tokenizer.next.type != 'FUNC_TYPE':
+            raise ValueError(f"Expected 'TYPE' initializing the function, got {self.tokenizer.next.value}")
+        function_type = self.tokenizer.next.value
+        #Verifica se a função tem nome
+        self.tokenizer.selectNext()
+        if self.tokenizer.next.type != 'IDENTIFIER':
+            raise ValueError(f"Expected function name after 'TYPE', got {self.tokenizer.next.value}")
+        function_name = self.tokenizer.next.value
+        #Verifica se a função tem paranteses esquerdo
+        self.tokenizer.selectNext()
+        if self.tokenizer.next.type != 'LPAREN':
+            raise ValueError(f"Expected '(' after function name, got {self.tokenizer.next.value}")
+        self.tokenizer.selectNext()
+        #Cria a lista de parâmetros
+        params = []
+        while self.tokenizer.next.type != 'RPAREN':
+            if self.tokenizer.next.type != 'TYPE':
+                raise ValueError(f"Expected 'TYPE' after '(', got {self.tokenizer.next.value}")
+            param_type = self.tokenizer.next.value
+            self.tokenizer.selectNext()
+            if self.tokenizer.next.type != 'IDENTIFIER':
+                raise ValueError(f"Expected parameter name after 'TYPE', got {self.tokenizer.next.value}")
+            param_name = self.tokenizer.next.value
+            params.append((param_type, param_name))
+            self.tokenizer.selectNext()
+            if self.tokenizer.next.type == 'COMMA':
+                self.tokenizer.selectNext()
+                if self.tokenizer.next.type == 'RPAREN':
+                    raise ValueError(f"Expected parameter after comma, got {self.tokenizer.next.value}")
+        #Pega o bloco de código da função
+        self.tokenizer.selectNext()
+        block = self.parseBlock()
+        #Cria o nó da função
+        func_dec = FuncDecl(function_type, function_name, params, block)
+        return func_dec
+
+
     def parseBlock(self):
         #Verifica se o bloco começa com chave esquerda
         self.current_token = self.tokenizer.next
@@ -154,9 +207,9 @@ class Parser:
         self.tokenizer.selectNext()
         statements = Statements()
     
-        while self.tokenizer.next.type != 'RBRACE' and self.tokenizer.next.type != 'EOF':
+        while self.tokenizer.next.type != 'RBRACE':
             statements.children.append(self.parseStatement())
-        
+
         #Verifica se o bloco termina com chave direita
         self.current_token = self.tokenizer.next
         if self.current_token.type != 'RBRACE':
@@ -299,6 +352,16 @@ class Parser:
         
         return While(condition, block)
     
+    def parseReturn(self):
+        self.tokenizer.selectNext()
+        expression = self.parseRelationalExpression()
+        self.current_token = self.tokenizer.next
+        if self.current_token.type != 'SEMICOLON':
+            raise ValueError("Missing semicolon after return statement.")
+        self.tokenizer.selectNext()
+        return Return(expression)
+
+
     def parseStatement(self):
         self.current_token = self.tokenizer.next
         #Parse para print, atribuição ou declaração
@@ -325,6 +388,9 @@ class Parser:
         #Parse para while
         elif self.current_token.type == "WHILE":
             return self.parseWhile()
+        #Parse para return
+        elif self.current_token.type == "RETURN":
+            return self.parseReturn()
         else:
             #Se não for nenhum dos anteriores, erro de sintaxe
             raise ValueError(f"Token inesperado: {self.current_token.value}")
@@ -379,8 +445,27 @@ class Parser:
     def parseFactor(self):
         self.current_token = self.tokenizer.next
         token_type = self.current_token.type
-        #Parse para número, identificador ou string
-        if token_type in ["NUMBER", "IDENTIFIER", "STRING"]:
+
+        if token_type == 'IDENTIFIER':
+            identifier_name = self.current_token.value
+            self.tokenizer.selectNext()
+            self.current_token = self.tokenizer.next
+            if self.current_token.type == 'LPAREN':
+                # Function call with return value
+                self.tokenizer.selectNext()
+                args = []
+                while self.tokenizer.next.type != 'RPAREN':
+                    arg_expr = self.parseRelationalExpression()
+                    args.append(arg_expr)
+                    if self.tokenizer.next.type == 'COMMA':
+                        self.tokenizer.selectNext()
+                self.tokenizer.selectNext()
+                return FuncCall(identifier_name, args)
+            else:
+                return Identifier(identifier_name)
+
+        #Parse para número ou string
+        if token_type in ["NUMBER", "STRING"]:
             value = self.current_token.value
             self.tokenizer.selectNext()
             self.current_token = self.tokenizer.next
@@ -390,8 +475,6 @@ class Parser:
                 return IntVal(value)
             elif token_type == "STRING":
                 return StrVal(value)
-            else:
-                return Identifier(value)
         #Parse para operador unário
         if token_type in ["PLUS", "MINUS", "NOT"]:
             self.tokenizer.selectNext()
@@ -429,7 +512,7 @@ class Parser:
         #Inicializa Tokenizer
         self.tokenizer = Tokenizer(code)
         #Cria a AST
-        ast = self.parseBlock()
+        ast = self.parseProgram()
         #Verifica se o código termina com EOF
         self.tokenizer.selectNext()
         self.current_token = self.tokenizer.next

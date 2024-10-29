@@ -1,4 +1,20 @@
 from abc import ABC, abstractmethod
+
+class SymbolTable:
+    def __init__(self):
+        # Dicionário para armazenar as variáveis
+        self.symbols = {}
+
+    def get(self, name):
+        # Retorna o valor da variável se ela existir caso contrário, levanta um erro
+        if name in self.symbols:
+            return self.symbols[name]
+        else:
+            raise ValueError(f"Undefined variable '{name}'")
+
+    def set(self, name, value_type):
+        # Define o valor da variável
+        self.symbols[name] = value_type
 #Superclasse de todos os nós da árvore
 class Node(ABC):
     def __init__(self, value=None):
@@ -14,9 +30,9 @@ class BinOp(Node):
         super().__init__(op)
         self.children = [left, right]
 
-    def Evaluate(self, symbol_table):
-        left_value, left_type = self.children[0].Evaluate(symbol_table)
-        right_value, right_type = self.children[1].Evaluate(symbol_table)
+    def Evaluate(self, funct_table,symbol_table):
+        left_value, left_type = self.children[0].Evaluate(funct_table,symbol_table)
+        right_value, right_type = self.children[1].Evaluate(funct_table,symbol_table)
         #Possíveis operações binárias
         operations = {
             'PLUS': self._handle_plus,
@@ -96,8 +112,8 @@ class UnOp(Node):
         super().__init__(op)
         self.children = [child]
 
-    def Evaluate(self, symbol_table):
-        value, value_type = self.children[0].Evaluate(symbol_table)
+    def Evaluate(self,funct_table, symbol_table):
+        value, value_type = self.children[0].Evaluate(funct_table,symbol_table)
         #Possíveis operações unárias
         operations = {
             'PLUS': self._handle_plus,
@@ -135,7 +151,7 @@ class IntVal(Node):
     def __init__(self, value):
         super().__init__(value)
 
-    def Evaluate(self,symbol_table):
+    def Evaluate(self,funct_table,symbol_table):
         #Retorna o valor do nó
         return self.value, 'int'
     
@@ -143,7 +159,7 @@ class StrVal(Node):
     def __init__(self, value):
         super().__init__(value.strip('"'))
     
-    def Evaluate(self, symbol_table):
+    def Evaluate(self, funct_table, symbol_table):
         return self.value, 'str'
 
 
@@ -152,7 +168,7 @@ class Identifier(Node):
     def __init__(self, value):
         super().__init__(value)
 
-    def Evaluate(self, symbol_table):
+    def Evaluate(self, funct_table, symbol_table):
         #Retorna o valor da variável
         return symbol_table.get(self.value)
 
@@ -162,14 +178,14 @@ class Assign(Node):
         super().__init__()
         self.children = [identifier, expression]
 
-    def Evaluate(self, symbol_table):
+    def Evaluate(self, funct_table, symbol_table):
         var_name = self.children[0].value
         # Checa se a variável foi declarada
         if var_name not in symbol_table.symbols:
             raise ValueError(f"Variable '{var_name}' not declared.")
 
         # Avalia a expressão
-        value, value_type = self.children[1].Evaluate(symbol_table)
+        value, value_type = self.children[1].Evaluate(funct_table, symbol_table)
         expected_type = symbol_table.get(var_name)[1]
 
         # Checagem de tipo e conversão implícita
@@ -190,7 +206,7 @@ class Declaration(Node):
         self.var_type = var_type
         self.declarations = declarations
 
-    def Evaluate(self, symbol_table):
+    def Evaluate(self, funct_table, symbol_table):
         # Valores padrão para inicialização
         default_values = {
             'int': 0,
@@ -226,8 +242,8 @@ class Print(Node):
         super().__init__()
         self.children = [expression]
 
-    def Evaluate(self, symbol_table):
-        value, type = self.children[0].Evaluate(symbol_table)
+    def Evaluate(self, funct_table, symbol_table):
+        value, type = self.children[0].Evaluate(funct_table, symbol_table)
         print(value)
         return None, None
 
@@ -236,7 +252,7 @@ class Scanf(Node):
     def __init__(self):
         super().__init__()
 
-    def Evaluate(self, symbol_table):
+    def Evaluate(self, funct_table, symbol_table):
         # Lê um valor int do usuário
         value = int(input())
         return value, 'int'
@@ -248,10 +264,10 @@ class Statements(Node):
         super().__init__()
         self.children = []
 
-    def Evaluate(self, symbol_table):
+    def Evaluate(self,funct_table,  symbol_table):
         # Avalia cada nó filho
         for child in self.children:
-            child.Evaluate(symbol_table)
+            child.Evaluate(funct_table, symbol_table)
         return None, None  
 
 
@@ -272,16 +288,16 @@ class If(Node):
         if false_block:
             self.children.append(false_block)
 
-    def Evaluate(self, symbol_table):
-        condition_value, condition_type = self.children[0].Evaluate(symbol_table)
+    def Evaluate(self, funct_table, symbol_table):
+        condition_value, condition_type = self.children[0].Evaluate(funct_table, symbol_table)
         # Checa se a condição é do tipo 'bool'
         if condition_type != 'bool':
             raise TypeError(f"Condition in 'if' must be 'bool', got '{condition_type}'")
         # Avalia o bloco correspondente
         if condition_value:
-            self.children[1].Evaluate(symbol_table)
+            self.children[1].Evaluate(funct_table, symbol_table)
         elif len(self.children) == 3:
-            self.children[2].Evaluate(symbol_table)
+            self.children[2].Evaluate(funct_table, symbol_table)
         return None, None 
 
 class While(Node):
@@ -289,15 +305,98 @@ class While(Node):
         super().__init__()
         self.children = [condition, block]
 
-    def Evaluate(self, symbol_table):
+    def Evaluate(self, funct_table, symbol_table):
         while True:
-            condition_value, condition_type = self.children[0].Evaluate(symbol_table)
+            condition_value, condition_type = self.children[0].Evaluate(funct_table, symbol_table)
             # Checa se a condição é do tipo 'bool'
             if condition_type != 'bool':
                 raise TypeError(f"Condition in 'while' must be 'bool', got '{condition_type}'")
             # Avalia a condição para continuar ou não
             if not condition_value:
                 break
-            self.children[1].Evaluate(symbol_table)
+            self.children[1].Evaluate(funct_table, symbol_table)
         return None, None  
 
+
+
+class Program(Node):
+    def __init__(self):
+        super().__init__()
+        self.children = []
+
+    def Evaluate(self, func_table,symbol_table):
+        for child in self.children:
+            child.Evaluate(func_table,symbol_table)
+        return None, None
+
+class FuncDecl(Node):
+    def __init__(self, func_type, func_name, args, block):
+        super().__init__()
+        self.func_type = func_type
+        self.func_name = func_name
+        self.params = args
+        self.children = [block]
+
+    def Evaluate(self,func_table,symbol_table):
+        # Checa se a função já foi declarada
+        if self.func_name in func_table.functions:
+            raise ValueError(f"Function '{self.func_name}' already declared.")
+        # Adiciona a função à tabela de símbolos
+        func_table.set(self.func_name, self)
+        return None, None
+    
+class FuncCall(Node):
+    def __init__(self, func_name, args):
+        super().__init__()
+        self.func_name = func_name
+        self.children = args
+
+    def Evaluate(self, func_table, symbol_table):
+        # Pegar a função da tabela de funções
+        func_dec = func_table.get(self.func_name)
+        func_params = func_dec.params
+        func_block = func_dec.children[0]
+        if len(self.children) != len(func_params):
+            raise ValueError(f"Function '{self.func_name}' expects {len(func_params)} arguments, got {len(self.children)}.")
+        # Evaluate arguments
+        args_values = []
+        for arg in self.children:
+            val, val_type = arg.Evaluate(func_table, symbol_table)
+            args_values.append((val, val_type))
+        # Criar uma nova tabela de símbolos para a função
+        func_symbol_table = SymbolTable()
+        # Inicializar os parâmetros da função no novo escopo
+        for (param_type, param_name), (arg_value, arg_type) in zip(func_params, args_values):
+            if param_type != arg_type:
+                # Conversão implícita de bool para int
+                if param_type == 'int' and arg_type == 'bool':
+                    arg_value = int(arg_value)
+                else:
+                    raise TypeError(f"Type mismatch in function '{self.func_name}' argument '{param_name}': expected '{param_type}', got '{arg_type}'.")
+            func_symbol_table.set(param_name, (arg_value, param_type))
+        # Executa o bloco da função
+        try:
+            func_block.Evaluate(func_table, func_symbol_table)
+            if func_dec.func_type != 'void' and self.func_name != 'main':
+                raise ValueError(f"Function '{self.func_name}' should return a value.")
+            else:
+                return None, None
+        except ReturnException as e:
+            if func_dec.func_type == 'void' and self.func_name != 'main':
+                raise ValueError(f"Function '{self.func_name}' should not return a value.")
+            return e.value, e.value_type
+
+
+class ReturnException(Exception):
+    def __init__(self, value, value_type):
+        self.value = value
+        self.value_type = value_type
+
+class Return(Node):
+    def __init__(self, expression):
+        super().__init__()
+        self.children = [expression]
+
+    def Evaluate(self, func_table, symbol_table):
+        value, value_type = self.children[0].Evaluate(func_table, symbol_table)
+        raise ReturnException(value, value_type)
