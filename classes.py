@@ -236,22 +236,29 @@ class Parser:
         
         return Print(expression)
     
-    def parseIdentifier(self):
-        #Determina o identificador
-        id = self.tokenizer.next
-
+    def parseIdentifierOrFuncCall(self):
+        # Determina o identificador
+        id_token = self.tokenizer.next
         self.tokenizer.selectNext()
         self.current_token = self.tokenizer.next
-        #Verifica se o próximo token é um '='
-        if self.current_token.type != 'ASSIGN':
-            raise ValueError(f"Deveria receber '=' após identificador, mas recebeu: '{self.current_token.value}'")
-        
-        #Determina a expressão
-        self.tokenizer.selectNext()
-        self.current_token = self.tokenizer.next
-        expression = self.parseRelationalExpression()
+        # Realiza a verificação se é uma atribuição ou uma chamada de função
+        if self.current_token.type == 'ASSIGN':
+            self.tokenizer.selectNext()
+            expression = self.parseRelationalExpression()
+            return Assign(Identifier(id_token.value), expression)
+        elif self.current_token.type == 'LPAREN':
+            self.tokenizer.selectNext()
+            args = []
+            while self.tokenizer.next.type != 'RPAREN':
+                arg_expr = self.parseRelationalExpression()
+                args.append(arg_expr)
+                if self.tokenizer.next.type == 'COMMA':
+                    self.tokenizer.selectNext()
+            self.tokenizer.selectNext() 
+            return FuncCall(id_token.value, args)
+        else:
+            raise ValueError(f"Token Inesperado depois de identificador '{id_token.value}': '{self.current_token.value}'")
 
-        return Assign(Identifier(id.value), expression)
     
     def parseDeclaration(self):
         #Determina o tipo da variável
@@ -365,18 +372,18 @@ class Parser:
     def parseStatement(self):
         self.current_token = self.tokenizer.next
         #Parse para print, atribuição ou declaração
-        if self.current_token.type in ["PRINTF","IDENTIFIER","TYPE"]:
+        if self.current_token.type in ["PRINTF", "IDENTIFIER", "TYPE"]:
             if self.current_token.type == "PRINTF":
                 result = self.parsePrintf()
                 self.tokenizer.selectNext()
             elif self.current_token.type == "IDENTIFIER":
-                result = self.parseIdentifier()
+                result = self.parseIdentifierOrFuncCall()
             elif self.current_token.type == "TYPE":
                 result = self.parseDeclaration()
             self.current_token = self.tokenizer.next
             if self.current_token.type != 'SEMICOLON':
                 raise ValueError(f"Falta de ponto e vírgula após printf.")
-        #Parase para ponto e vírgula
+            #Parase para ponto e vírgula
         elif self.current_token.type == 'SEMICOLON':
             result = NoOp()
         #Parse para bloco
@@ -460,6 +467,7 @@ class Parser:
                     if self.tokenizer.next.type == 'COMMA':
                         self.tokenizer.selectNext()
                 self.tokenizer.selectNext()
+                self.current_token = self.tokenizer.next
                 return FuncCall(identifier_name, args)
             else:
                 return Identifier(identifier_name)

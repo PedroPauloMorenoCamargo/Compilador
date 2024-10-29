@@ -275,7 +275,7 @@ class NoOp(Node):
     def __init__(self):
         super().__init__()
 
-    def Evaluate(self,symbol_table):
+    def Evaluate(self,funct_table,symbol_table):
         #Faz nada
         return 0    
     
