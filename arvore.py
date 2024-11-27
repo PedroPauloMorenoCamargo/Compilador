@@ -220,7 +220,7 @@ class Declaration(Node):
             
             if expr != None:
                 # Avalia a expressão
-                value, value_type = expr.Evaluate(symbol_table)
+                value, value_type = expr.Evaluate(funct_table,symbol_table)
 
                 # Checagem de tipo e conversão implícita
                 if value_type != self.var_type:
