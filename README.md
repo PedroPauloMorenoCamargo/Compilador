@@ -1,49 +1,162 @@
-# Compilador
+# Compilador – A Tiny C‑like Compiler in Python
 
-Ebnf:
+> **Status:** educational / proof‑of‑concept • **Language:** Python 3
 
-BLOCK = "{", { STATEMENT }, "}";
+Compilador is a didactic compiler for a small, C‑inspired language.  
+Depending on the branch you check out, it will either **interpret** the source program on the fly (`main`) or **compile** it to a simplified assembly listing (`assembly`).
 
-STATEMENT = ( λ | ASSIGNMENT | PRINTF | IF_STATEMENT | WHILE_STATEMENT | BLOCK | DECLARATION | ";") ;
+| Branch      | Behaviour                            | Output                                                          |
+|-------------|--------------------------------------|-----------------------------------------------------------------|
+| `main`      | Parses & **executes** the program    | Runs immediately, printing any `printf` output to the console   |
+| `assembly`  | Parses & **generates assembly code** | Creates a `<source>.asm` file with low‑level instructions       |
 
-ASSIGNMENT = IDENTIFIER, "=", RELATIONAL_EXPRESSION, ";";
 
-DECLARATION = TYPE, IDENTIFIER_DECL, ";" ;
+## Language Features
 
-IDENTIFIER_DECL = IDENTIFIER, [ "=", RELATIONAL_EXPRESSION ], { ",", IDENTIFIER, [ "=", RELATIONAL_EXPRESSION ] } ;
+* **Variables & Types** – `int` and `str`, optional initialisation  
+  ```c
+  int a = 5, b;
+  str  name = "Alice";
+  ```
+* **Expressions & Operators** – arithmetic `+ - * /`, relational `== < >`, logical `&& ||`
+* **Control Flow** – `if` / `else` conditionals and `while` loops  
+  ```c
+  if (a < 10) { … } else { … }
+  while (condition) { … }
+  ```
+* **I/O** – `printf(expr);` for output and a stub `scanf();` for input
+* **Blocks** – statements grouped inside `{ … }`
+* **Semicolons** – every statement ends with `;` (except block headers)
 
-PRINTF = "printf", "(", RELATIONAL_EXPRESSION, ")", ";" ;
 
-SCANF = "scanf", "(", ")" ;
+## EBNF Grammar
 
-IF_STATEMENT = "if", "(", RELATIONAL_EXPRESSION, ")", STATEMENT, [ "else", STATEMENT ] ;
+```ebnf
+PROGRAM              = { STATEMENT } ;
 
-WHILE_STATEMENT = "while", "(", RELATIONAL_EXPRESSION, ")", STATEMENT ;
+STATEMENT            = ( ASSIGNMENT
+                       | DECLARATION
+                       | PRINTF
+                       | IF_STATEMENT
+                       | WHILE_STATEMENT
+                       | BLOCK
+                       | ";"                     ) ;
 
-EXPRESSION = TERM, { ("||" | "+","-"), TERM } ;
+BLOCK                = "{", { STATEMENT }, "}" ;
 
-RELATIONAL_EXPRESSION = EXPRESSION, { ("==" | "<", ">"), EXPRESSION } ;
+DECLARATION          = TYPE, IDENT_DECL, ";" ;
+IDENT_DECL           = IDENTIFIER, [ "=", EXPR ]
+                       { ",", IDENTIFIER, [ "=", EXPR ] } ;
 
-TERM = FACTOR, { ("*" | "/" | "&&"), FACTOR } ;
+ASSIGNMENT           = IDENTIFIER, "=", EXPR, ";" ;
 
-FACTOR = (("+" | "-" | "!"), FACTOR) | NUMBER | "(", RELATIONAL_EXPRESSION, ")" | IDENTIFIER | SCANF | STRING ;
+PRINTF               = "printf", "(", EXPR, ")", ";" ;
 
-IDENTIFIER = LETTER, { LETTER | DIGIT | "_" } ;
+SCANF                = "scanf", "(", ")",          (* no arguments *) ;
 
-NUMBER = DIGIT, { DIGIT } ;
+IF_STATEMENT         = "if", "(", EXPR, ")", STATEMENT,
+                       [ "else", STATEMENT ] ;
 
-STRING = CHARACTER, {CHARACTER};
+WHILE_STATEMENT      = "while", "(", EXPR, ")", STATEMENT ;
 
-LETTER = ( a | ... | z | A | ... | Z ) ;
+EXPR                 = TERM, { ("||" | "+" | "-"), TERM } ;
+TERM                 = FACTOR, { ("*" | "/" | "&&"), FACTOR } ;
+FACTOR               = ( ("+" | "-" | "!"), FACTOR )
+                     | NUMBER
+                     | STRING
+                     | IDENTIFIER
+                     | SCANF
+                     | "(", EXPR, ")" ;
 
-DIGIT = ( 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 ) ;
+TYPE                 = "int" | "str" ;
+IDENTIFIER           = LETTER, { LETTER | DIGIT | "_" } ;
+NUMBER               = DIGIT, { DIGIT } ;
 
-CHARACTER = LETTER | DIGIT | SPECIAL_CHARACTER ;
+LETTER               = "A" … "Z" | "a" … "z" ;
+DIGIT                = "0" … "9" ;
+STRING               = """, { CHARACTER }, """ ;
+CHARACTER            = LETTER | DIGIT | SYMBOL ;
+SYMBOL               = " " | "!" | "@" | "#" | "$" | "%" | "^" | "&"
+                       | "*" | "(" | ")" | "-" | "_" | "+" | "="
+                       | "{" | "}" | "[" | "]" | ":" | ";" | "'" | "<"
+                       | ">" | "," | "." | "?" | "/" | "\" | "|" ;
+```
 
-SPECIAL_CHARACTER = ( " " | "!" | "@" | "#" | "$" | "%" | "^" | "&" | "*" | "(" | ")" | "-" | "_" | "+" | "=" | "{" | "}" | "[" | "]" | ":" | ";" | "'" | "<" | ">" | "," | "." | "?" | "/" | "\\" | "|" ) ;
+---
 
-TYPE = ("int" | "str");
+## Getting Started
 
-![Alt text](diagram.png)
+### 1. Clone the repo
+```bash
+git clone https://github.com/PedroPauloMorenoCamargo/Compilador.git
+cd Compilador
+```
 
-![git status](http://3.129.230.99/svg/PedroPauloMorenoCamargo/Compilador/)
+### 2. Requirements
+
+* Python 3 (no external libraries needed).
+
+### 3. Write or edit your source file
+
+A sample program lives in **`teste.c`**. Edit it or create a new `myprog.c`.
+
+### 4. Run – main branch (interpreter)
+
+```bash
+# interpret default teste.c
+python main.py
+
+# or pass an explicit source file if main.py supports it
+python main.py myprog.c
+```
+
+The program executes immediately; any `printf` statements print to the console.
+
+### 5. Run – assembly branch
+
+```bash
+git checkout assembly
+python main.py            # generates teste.asm (or <file>.asm)
+```
+
+Open the resulting `.asm` file to inspect the low‑level code.  
+Assembling & running this output is left to you (target dialect is illustrative).
+
+---
+
+## Example
+
+```c
+int i = 0;
+while (i < 5) {
+    printf(i);
+    i = i + 1;
+}
+```
+*Main branch output:*
+```
+0
+1
+2
+3
+4
+```
+
+---
+
+## Repository Layout (main branch)
+
+```
+.
+├── lexer.py       # token definitions
+├── parser.py      # recursive‑descent parser -> AST
+├── ast.py         # node classes
+├── interpreter.py # AST walker / runtime
+├── main.py        # entry point
+└── teste.c        # sample source program
+```
+
+Assembly branch swaps `interpreter.py` for `codegen_asm.py` that walks the AST
+and emits assembly instead.
+
+
