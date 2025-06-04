@@ -40,12 +40,12 @@ The `main` branch **parses and executes** programs directly (interpreter), while
 
 ## EBNF Grammar
 ```ebnf
-PROGRAM         = { FUNCTION } ;
+PROGRAM         = { FUNC_DECL } FUNC_CALL ";" ;
 
-FUNCTION        = RETURN_TYPE IDENTIFIER
-                  "(", [ PARAM_LIST ], ")" BLOCK ;
+FUNC_DECL       = FUNC_TYPE IDENTIFIER
+                  "(" [ PARAM_LIST ] ")" BLOCK ;
 
-RETURN_TYPE     = "int" | "str" | "void" ;
+FUNC_TYPE       = "int" | "str" | "void" ;
 
 PARAM_LIST      = PARAM { "," PARAM } ;
 PARAM           = TYPE IDENTIFIER ;
@@ -79,14 +79,13 @@ IF_STMT         = "if" "(" EXPR ")" STATEMENT
 
 WHILE_STMT      = "while" "(" EXPR ")" STATEMENT ;
 
-EXPR            = REL_EXPR ;
-REL_EXPR        = OR_EXPR [ REL_OP OR_EXPR ] ;
+EXPR            = COMP_EXPR ;
+
+COMP_EXPR       = ADD_OR_EXPR [ REL_OP ADD_OR_EXPR ] ;
 REL_OP          = "==" | "!=" | "<" | ">" ;
 
-OR_EXPR         = AND_EXPR { "||" AND_EXPR } ;
-AND_EXPR        = ADD_EXPR { "&&" ADD_EXPR } ;
-ADD_EXPR        = TERM     { ("+" | "-") TERM } ;
-TERM            = FACTOR   { ("*" | "/") FACTOR } ;
+ADD_OR_EXPR     = TERM_AND_EXPR { ("+" | "-" | "||") TERM_AND_EXPR } ;
+TERM_AND_EXPR   = FACTOR { ("*" | "/" | "&&") FACTOR } ;
 
 FACTOR          = ( "+" | "-" | "!" ) FACTOR
                 | NUMBER
@@ -107,6 +106,7 @@ LETTER          = "A" … "Z" | "a" … "z" ;
 DIGIT           = "0" … "9" ;
 CHARACTER       = LETTER | DIGIT | SYMBOL ;
 SYMBOL          = any visible printable character except '"' and control chars ;
+
 
 ```
 
