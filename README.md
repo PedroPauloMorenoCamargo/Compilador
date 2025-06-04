@@ -1,6 +1,6 @@
 # Compilador – A Tiny C‑like Compiler in Python
 
-> **Status:** educational / proof‑of‑concept • **Language:** Python 3
+> • **Language:** Python 3
 
 Compilador is a didactic compiler for a small, C‑inspired language.  
 Depending on the branch you check out, it will either **interpret** the source program on the fly (`main`) or **compile** it to a simplified assembly listing (`assembly`).
