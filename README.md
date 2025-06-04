@@ -1,6 +1,5 @@
-# Compilador — A Tiny C‑like Language Compiler/Interpreter in Python
+# Compilador — A C‑like Language Compiler/Interpreter in Python
 
-> **Status:** educational · proof‑of‑concept  
 > **Implementation language:** Python 3 (standard library only)
 
 ---
@@ -18,7 +17,7 @@
 ---
 
 ## Project Overview
-**Compilador** is a didactic compiler for a **small C‑inspired language**.  
+**Compilador** is a didactic compiler for a **C‑inspired language**.  
 The `main` branch **parses and executes** programs directly (interpreter), while the
 `assembly` branch **translates the same language into a simplified assembly listing**.
 
