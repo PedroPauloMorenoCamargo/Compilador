@@ -1,6 +1,7 @@
 # Compilador — A Tiny C‑like Language Compiler/Interpreter in Python
 
-> **Implementation language:** Python 3
+> **Status:** educational · proof‑of‑concept  
+> **Implementation language:** Python 3 (standard library only)
 
 ---
 
@@ -26,7 +27,7 @@ The `main` branch **parses and executes** programs directly (interpreter), while
 ## Language Features
 | Category        | Supported syntax |
 |-----------------|------------------|
-| **Scalars**     | `int`, `str` |
+| **Types**       | `int`, `str`, `void` |
 | **Declarations**| `int x = 3, y;` · `str name = "Alice";` |
 | **Assignments** | `x = x + 1;` |
 | **Expressions** | `+ - * / == != < > && || !` (with precedence) |
@@ -40,63 +41,74 @@ The `main` branch **parses and executes** programs directly (interpreter), while
 
 ## EBNF Grammar
 ```ebnf
-PROGRAM            = { FUNCTION } ;
+PROGRAM         = { FUNCTION } ;
 
-FUNCTION           = ( TYPE | "void" ), IDENTIFIER,
-                     "(", [ PARAM_LIST ], ")", BLOCK ;
+FUNCTION        = RETURN_TYPE IDENTIFIER
+                  "(", [ PARAM_LIST ], ")" BLOCK ;
 
-PARAM_LIST         = PARAM { "," PARAM } ;
-PARAM              = TYPE IDENTIFIER ;
+RETURN_TYPE     = "int" | "str" | "void" ;
 
-BLOCK              = "{", { STATEMENT }, "}" ;
+PARAM_LIST      = PARAM { "," PARAM } ;
+PARAM           = TYPE IDENTIFIER ;
 
-STATEMENT          =  DECLARATION
-                   | ASSIGNMENT
-                   | FUNC_CALL ";"
-                   | PRINTF_STMT
-                   | RETURN_STMT
-                   | IF_STMT
-                   | WHILE_STMT
-                   | BLOCK
-                   | ";" ;
+BLOCK           = "{" { STATEMENT } "}" ;
 
-DECLARATION        = TYPE DECL_ITEM { "," DECL_ITEM } ";" ;
-DECL_ITEM          = IDENTIFIER [ "=" EXPR ] ;
+STATEMENT       = DECLARATION
+                | ASSIGNMENT
+                | FUNC_CALL ";"
+                | PRINTF_STMT
+                | RETURN_STMT
+                | IF_STMT
+                | WHILE_STMT
+                | BLOCK
+                | ";" ;
 
-ASSIGNMENT         = IDENTIFIER "=" EXPR ";" ;
+DECLARATION     = TYPE DECL_ITEM { "," DECL_ITEM } ";" ;
+DECL_ITEM       = IDENTIFIER [ "=" EXPR ] ;
 
-FUNC_CALL          = IDENTIFIER "(", [ ARG_LIST ], ")" ;
-ARG_LIST           = EXPR { "," EXPR } ;
+ASSIGNMENT      = IDENTIFIER "=" EXPR ";" ;
 
-PRINTF_STMT        = "printf" "(", EXPR, ")" ";" ;
+FUNC_CALL       = IDENTIFIER "(" [ ARG_LIST ] ")" ;
+ARG_LIST        = EXPR { "," EXPR } ;
 
-RETURN_STMT        = "return" EXPR ";" ;
+PRINTF_STMT     = "printf" "(" EXPR ")" ";" ;
 
-IF_STMT            = "if" "(", EXPR, ")", STATEMENT
-                     [ "else" STATEMENT ] ;
+RETURN_STMT     = "return" EXPR ";" ;
 
-WHILE_STMT         = "while" "(", EXPR, ")", STATEMENT ;
+IF_STMT         = "if" "(" EXPR ")" STATEMENT
+                  [ "else" STATEMENT ] ;
 
-EXPR               = REL_EXPR ;
-REL_EXPR           = OR_EXPR [ ( "==" | "!=" | "<" | ">" ) OR_EXPR ] ;
-OR_EXPR            = AND_EXPR { "||" AND_EXPR } ;
-AND_EXPR           = ADD_EXPR { "&&" ADD_EXPR } ;
-ADD_EXPR           = TERM     { ( "+" | "-" ) TERM } ;
-TERM               = FACTOR   { ( "*" | "/" ) FACTOR } ;
+WHILE_STMT      = "while" "(" EXPR ")" STATEMENT ;
 
-FACTOR             = ( "+" | "-" | "!" ) FACTOR
-                   | NUMBER
-                   | STRING
-                   | IDENTIFIER [ FUNC_CALL_TAIL ]
-                   | "scanf" "(", ")"          (* returns int *)
-                   | "(", EXPR, ")" ;
+EXPR            = REL_EXPR ;
+REL_EXPR        = OR_EXPR [ REL_OP OR_EXPR ] ;
+REL_OP          = "==" | "!=" | "<" | ">" ;
 
-FUNC_CALL_TAIL     = "(", [ ARG_LIST ], ")" ;
+OR_EXPR         = AND_EXPR { "||" AND_EXPR } ;
+AND_EXPR        = ADD_EXPR { "&&" ADD_EXPR } ;
+ADD_EXPR        = TERM     { ("+" | "-") TERM } ;
+TERM            = FACTOR   { ("*" | "/") FACTOR } ;
 
-TYPE               = "int" | "str" ;
-IDENTIFIER         = LETTER { LETTER | DIGIT | "_" } ;
-NUMBER             = DIGIT { DIGIT } ;
-STRING             = '"' { CHARACTER } '"' ;
+FACTOR          = ( "+" | "-" | "!" ) FACTOR
+                | NUMBER
+                | STRING
+                | IDENTIFIER [ FUNC_CALL_TAIL ]
+                | "scanf" "(" ")"
+                | "(" EXPR ")" ;
+
+FUNC_CALL_TAIL  = "(" [ ARG_LIST ] ")" ;
+
+TYPE            = "int" | "str" ;
+
+IDENTIFIER      = LETTER { LETTER | DIGIT | "_" } ;
+NUMBER          = DIGIT { DIGIT } ;
+STRING          = '"' { CHARACTER } '"' ;
+
+LETTER          = "A" … "Z" | "a" … "z" ;
+DIGIT           = "0" … "9" ;
+CHARACTER       = LETTER | DIGIT | SYMBOL ;
+SYMBOL          = any visible printable character except '"' and control chars ;
+
 ```
 
 ---
