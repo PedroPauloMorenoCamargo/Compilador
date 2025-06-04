@@ -1,131 +1,141 @@
-# Compiler Project – A C‑like Compiler in Python
+# Compilador — A Tiny C‑like Language Compiler/Interpreter in Python
 
-> • **Language:** Python 3
+> **Implementation language:** Python 3
 
-Compiler is a didactic compiler for a small, C‑inspired language.  
-Depending on the branch you check out, it will either **interpret** the source program on the fly (`main`) or **compile** it to a simplified assembly listing (`assembly`).
+---
 
-| Branch      | Behaviour                            | Output                                                          |
-|-------------|--------------------------------------|-----------------------------------------------------------------|
-| `main`      | Parses & **executes** the program    | Runs immediately, printing any `printf` output to the console   |
-| `assembly`  | Parses & **generates assembly code** | Creates a `<source>.asm` file with low‑level instructions       |
+## Table of Contents
+1. [Project Overview](#project-overview)  
+2. [Language Features](#language-features)  
+3. [EBNF Grammar](#ebnf-grammar)  
+4. [Repository Structure](#repository-structure)  
+5. [Getting Started](#getting-started)  
+6. [Examples](#examples)  
+7. [Implementation Notes](#implementation-notes)  
+8. [Branches](#branches)  
 
+---
+
+## Project Overview
+**Compilador** is a didactic compiler for a **small C‑inspired language**.  
+The `main` branch **parses and executes** programs directly (interpreter), while the
+`assembly` branch **translates the same language into a simplified assembly listing**.
+
+---
 
 ## Language Features
+| Category        | Supported syntax |
+|-----------------|------------------|
+| **Scalars**     | `int`, `str` |
+| **Declarations**| `int x = 3, y;` · `str name = "Alice";` |
+| **Assignments** | `x = x + 1;` |
+| **Expressions** | `+ - * / == != < > && || !` (with precedence) |
+| **Control flow**| `if (cond) stmt [else stmt]` · `while (cond) stmt` |
+| **Functions**   | `int sum(int a,int b){…}` · `void main(){…}` |
+| **I/O**         | `printf(expr);` · `scanf();` |
+| **Comments**    | `/* … */` are stripped |
+| **Empty stmt**  | bare `;` (no‑op) |
 
-* **Variables & Types** – `int` and `str`, optional initialisation  
-  ```c
-  int a = 5, b;
-  str  name = "Alice";
-  ```
-* **Expressions & Operators** – arithmetic `+ - * /`, relational `== < >`, logical `&& ||`
-* **Control Flow** – `if` / `else` conditionals and `while` loops  
-  ```c
-  if (a < 10) { … } else { … }
-  while (condition) { … }
-  ```
-* **I/O** – `printf(expr);` for output and a stub `scanf();` for input
-* **Blocks** – statements grouped inside `{ … }`
-* **Semicolons** – every statement ends with `;` (except block headers)
-
+---
 
 ## EBNF Grammar
-
 ```ebnf
-PROGRAM              = { STATEMENT } ;
+PROGRAM            = { FUNCTION } ;
 
-STATEMENT            = ( ASSIGNMENT
-                       | DECLARATION
-                       | PRINTF
-                       | IF_STATEMENT
-                       | WHILE_STATEMENT
-                       | BLOCK
-                       | ";"                     ) ;
+FUNCTION           = ( TYPE | "void" ), IDENTIFIER,
+                     "(", [ PARAM_LIST ], ")", BLOCK ;
 
-BLOCK                = "{", { STATEMENT }, "}" ;
+PARAM_LIST         = PARAM { "," PARAM } ;
+PARAM              = TYPE IDENTIFIER ;
 
-DECLARATION          = TYPE, IDENT_DECL, ";" ;
-IDENT_DECL           = IDENTIFIER, [ "=", EXPR ]
-                       { ",", IDENTIFIER, [ "=", EXPR ] } ;
+BLOCK              = "{", { STATEMENT }, "}" ;
 
-ASSIGNMENT           = IDENTIFIER, "=", EXPR, ";" ;
+STATEMENT          =  DECLARATION
+                   | ASSIGNMENT
+                   | FUNC_CALL ";"
+                   | PRINTF_STMT
+                   | RETURN_STMT
+                   | IF_STMT
+                   | WHILE_STMT
+                   | BLOCK
+                   | ";" ;
 
-PRINTF               = "printf", "(", EXPR, ")", ";" ;
+DECLARATION        = TYPE DECL_ITEM { "," DECL_ITEM } ";" ;
+DECL_ITEM          = IDENTIFIER [ "=" EXPR ] ;
 
-SCANF                = "scanf", "(", ")",          (* no arguments *) ;
+ASSIGNMENT         = IDENTIFIER "=" EXPR ";" ;
 
-IF_STATEMENT         = "if", "(", EXPR, ")", STATEMENT,
-                       [ "else", STATEMENT ] ;
+FUNC_CALL          = IDENTIFIER "(", [ ARG_LIST ], ")" ;
+ARG_LIST           = EXPR { "," EXPR } ;
 
-WHILE_STATEMENT      = "while", "(", EXPR, ")", STATEMENT ;
+PRINTF_STMT        = "printf" "(", EXPR, ")" ";" ;
 
-EXPR                 = TERM, { ("||" | "+" | "-"), TERM } ;
-TERM                 = FACTOR, { ("*" | "/" | "&&"), FACTOR } ;
-FACTOR               = ( ("+" | "-" | "!"), FACTOR )
-                     | NUMBER
-                     | STRING
-                     | IDENTIFIER
-                     | SCANF
-                     | "(", EXPR, ")" ;
+RETURN_STMT        = "return" EXPR ";" ;
 
-TYPE                 = "int" | "str" ;
-IDENTIFIER           = LETTER, { LETTER | DIGIT | "_" } ;
-NUMBER               = DIGIT, { DIGIT } ;
+IF_STMT            = "if" "(", EXPR, ")", STATEMENT
+                     [ "else" STATEMENT ] ;
 
-LETTER               = "A" … "Z" | "a" … "z" ;
-DIGIT                = "0" … "9" ;
-STRING               = """, { CHARACTER }, """ ;
-CHARACTER            = LETTER | DIGIT | SYMBOL ;
-SYMBOL               = " " | "!" | "@" | "#" | "$" | "%" | "^" | "&"
-                       | "*" | "(" | ")" | "-" | "_" | "+" | "="
-                       | "{" | "}" | "[" | "]" | ":" | ";" | "'" | "<"
-                       | ">" | "," | "." | "?" | "/" | "\" | "|" ;
+WHILE_STMT         = "while" "(", EXPR, ")", STATEMENT ;
+
+EXPR               = REL_EXPR ;
+REL_EXPR           = OR_EXPR [ ( "==" | "!=" | "<" | ">" ) OR_EXPR ] ;
+OR_EXPR            = AND_EXPR { "||" AND_EXPR } ;
+AND_EXPR           = ADD_EXPR { "&&" ADD_EXPR } ;
+ADD_EXPR           = TERM     { ( "+" | "-" ) TERM } ;
+TERM               = FACTOR   { ( "*" | "/" ) FACTOR } ;
+
+FACTOR             = ( "+" | "-" | "!" ) FACTOR
+                   | NUMBER
+                   | STRING
+                   | IDENTIFIER [ FUNC_CALL_TAIL ]
+                   | "scanf" "(", ")"          (* returns int *)
+                   | "(", EXPR, ")" ;
+
+FUNC_CALL_TAIL     = "(", [ ARG_LIST ], ")" ;
+
+TYPE               = "int" | "str" ;
+IDENTIFIER         = LETTER { LETTER | DIGIT | "_" } ;
+NUMBER             = DIGIT { DIGIT } ;
+STRING             = '"' { CHARACTER } '"' ;
+```
+
+---
+
+## Repository Structure
+```
+.
+├── arvore.py      # AST nodes & symbol tables
+├── classes.py     # pre‑processor, tokenizer, parser
+├── main.py        # CLI entry point
+├── teste.c        # sample program
+└── (assembly branch adds codegen_asm.py)
 ```
 
 ---
 
 ## Getting Started
+### 1 · Prerequisites
+* Python 3.8+ (no external deps)
 
-### 1. Clone the repo
+### 2 · Clone
 ```bash
 git clone https://github.com/PedroPauloMorenoCamargo/Compilador.git
 cd Compilador
 ```
 
-### 2. Requirements
+### 3 · Write a program
+Edit **`teste.c`** or create `myprog.c`.
 
-* Python 3 (no external libraries needed).
-
-### 3. Write or edit your source file
-
-A sample program lives in **`teste.c`**. Edit it or create a new `myprog.c`.
-
-### 4. Run – main branch (interpreter)
-
+### 4 · Run (interpreter)
 ```bash
-# interpret default teste.c
-python main.py
-
-# or pass an explicit source file if main.py supports it
 python main.py myprog.c
 ```
-
-The program executes immediately; any `printf` statements print to the console.
-
-### 5. Run – assembly branch
-
-```bash
-git checkout assembly
-python main.py            # generates teste.asm (or <file>.asm)
-```
-
-Open the resulting `.asm` file to inspect the low‑level code.  
-Assembling & running this output is left to you (target dialect is illustrative).
+The program executes immediately; `printf` outputs appear in the console.
 
 ---
 
-## Example
-
+## Examples
+### Loop
 ```c
 int i = 0;
 while (i < 5) {
@@ -133,7 +143,7 @@ while (i < 5) {
     i = i + 1;
 }
 ```
-*Main branch output:*
+_Output_
 ```
 0
 1
@@ -142,21 +152,32 @@ while (i < 5) {
 4
 ```
 
+### Functions
+```c
+int sum(int a, int b) {
+    return a + b;
+}
+
+void main() {
+    int r = sum(2, 3);
+    printf(r);
+}
+```
+_Output_
+```
+5
+```
+
 ---
 
-## Repository Layout (main branch)
+## Implementation Notes
+* **Type checks** — enforces `int`, `str`, `bool`; allows implicit `bool→int`.
+* **Short‑circuit** — `&&`, `||` stop evaluation early.
+* **Return** — implemented with an internal `ReturnException`.
+* **Scoping** — each function call gets its own `SymbolTable`.
 
-```
-.
-├── lexer.py       # token definitions
-├── parser.py      # recursive‑descent parser -> AST
-├── ast.py         # node classes
-├── interpreter.py # AST walker / runtime
-├── main.py        # entry point
-└── teste.c        # sample source program
-```
+---
 
-Assembly branch swaps `interpreter.py` for `codegen_asm.py` that walks the AST
-and emits assembly instead.
-
-
+## Branches
+* **`main`** — builds an AST and **runs** the program.  
+* **`assembly`** — identical front‑end but **emits a `.asm` file** instead of executing.
