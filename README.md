@@ -1,6 +1,6 @@
 # Compilador — A C‑like Language Compiler/Interpreter in Python
 
-> **Implementation language:** Python 3 (standard library only)
+> **Implementation language:** Python 3 
 
 ---
 
@@ -125,19 +125,24 @@ SYMBOL          = any visible printable character except '"' and control chars ;
 ---
 
 ## Getting Started
+
 ### 1 · Prerequisites
+
 * Python 3.8+ (no external deps)
 
 ### 2 · Clone
+
 ```bash
 git clone https://github.com/PedroPauloMorenoCamargo/Compilador.git
 cd Compilador
 ```
 
 ### 3 · Write a program
+
 Edit **`teste.c`** or create `myprog.c`.
 
-### 4 · Run (interpreter)
+### 4 · Run (interpreter)
+
 ```bash
 python main.py myprog.c
 ```
